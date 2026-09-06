@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+		<title> Sammy Bowns </title>
+		<meta name="description" content="Descripción corta de la tienda">
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Work+Sans:wght@400;500;600;700&display=swap">
+		<link rel="stylesheet" href="./styles.css">
+	</head>
+	<body>
+		<!-- HEADER -->
+		<header class="header">
+			<div class="header__inner">
+				<a href="#" class="brand" data-view-link="shop">
+					<span class="brand__logo" id="logo-placeholder" title="Reemplazar por el logo real"> <img src="./img/Logo.jpeg" alt="Logo Nombre Empresa" id="logo-img"> </span>
+					<span class="brand__name"> Sammy Bowns </span>
+				</a>
+				<nav class="header__actions">
+					<button class="btn-link" id="btn-login" type="button"> Entrar </button>
+					<button class="cart-btn" id="btn-cart" type="button" aria-label="Ver bolsa de compras">
+						<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+							<path d="M6 8h12l-1 12H7L6 8z"/>
+							<path d="M9 8V6a3 3 0 0 1 6 0v2"/>
+						</svg>
+						<span class="cart-btn__count" id="cart-count"> 0 </span>
+					</button>
+				</nav>
+			</div>
+		</header>
+		<div class="ribbon-divider" aria-hidden="true"></div>
+		<!-- VISTA TIENDA -->
+		<main id="view-shop" class="view">
+			<section class="hero">
+				<h1> Sammy Bowns </h1>
+				<p class="hero__tagline"> Frase corta / eslogan de la tienda 🎀 </p>
+				<a class="hero__whatsapp" id="whatsapp-link-hero" href="https://wa.me/573217269632" target="_blank" rel="noopener"> Escribir por WhatsApp </a>
+			</section>
+			<section class="toolbar">
+				<button class="menu-toggle" id="menu-toggle" type="button" aria-label="Abrir menú de categorías" aria-expanded="false" aria-controls="categories">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+						<path d="M4 7h16"/>
+						<path d="M4 12h16"/>
+						<path d="M4 17h16"/>
+					</svg>
+					<span> Categorías </span>
+				</button>
+				<div class="categories" id="categories">
+					<button class="chip is-active" data-category="todos"> Todos </button>
+					<button class="chip" data-category="promo"> Solo promoción </button>
+					<!-- REEMPLAZAR / AMPLIAR: agrega aquí las categorías reales de tus productos -->
+					<button class="chip" data-category="Colección Escolar"> Colección Escolar </button>
+					<button class="chip" data-category="Colección Princesas"> Colección Princesas </button>
+					<button class="chip" data-category="Colección Bebés"> Colección Bebés </button>
+					<button class="chip" data-category="Fiestas"> Fiestas </button>
+					<button class="chip" data-category="Diademas"> Diademas </button>
+					<button class="chip" data-category="Clips Variados"> Clips Variados </button>
+					<button class="chip" data-category="Kanekalon"> Kanekalon </button>
+					<button class="chip" data-category="Kit Para Peinados"> Kit Para Peinados </button>
+				</div>
+				<label class="sort">
+					<span> Ordenar por </span>
+					<select id="sort-select">
+						<option value="default"> Padrón </option>
+						<option value="price-asc"> Precio: menor a mayor </option>
+						<option value="price-desc"> Precio: mayor a menor </option>
+						<option value="name-asc"> Nombre: A-Z </option>
+					</select>
+				</label>
+			</section>
+			<section class="products" id="products-grid">
+				<!-- Las tarjetas de producto se generan dinámicamente desde script.js -->
+			</section>
+			<p class="empty-state" id="empty-state" hidden> Ningún producto encontrado </p>
+		</main>
+		<!-- VISTA SOBRE -->
+		<main id="view-about" class="view" hidden>
+			<section class="about">
+				<h1> Sobre nosotros </h1>
+				<!-- REEMPLAZAR: texto real "sobre la tienda" -->
+				<p> Texto de presentación de la tienda. Cuenta aquí la historia de la marca, qué vende y por qué elegirla. </p>
+			</section>
+		</main>
+		<!-- FOOTER -->
+		<footer class="footer">
+			<div class="footer__inner">
+				<div class="footer__brand">
+					<strong> Sammy Bowns </strong>
+					<p> Frase corta / eslogan de la tienda 🎀 </p>
+				</div>
+				<div class="footer__col">
+					<h3> Enlaces </h3>
+					<a href="#" data-view-link="shop"> Productos </a>
+					<a href="#" data-view-link="about"> Sobre </a>
+					<a href="#" id="footer-login"> Entrar </a>
+				</div>
+				<div class="footer__col">
+					<h3> Atención </h3>
+					<!-- REEMPLAZAR: correo y teléfono reales -->
+					<a href="mailto:correo@ejemplo.com"> correo@ejemplo.com </a>
+					<span> +57 3217269632 </span>
+				</div>
+				<div class="footer__col">
+					<h3> Formas de pago </h3>
+					<span> Coordinado vía WhatsApp </span>
+				</div>
+			</div>
+			<p class="footer__bottom"> Sammy Bowns — todos los derechos reservados </p>
+		</footer>
+		<!-- MODAL PRODUCTO AÑADIDO -->
+		<div class="modal" id="modal-added" hidden>
+			<div class="modal__box">
+				<p> ¡Producto añadido a la bolsa! </p>
+				<div class="modal__actions">
+					<button class="btn btn--ghost" id="modal-added-continue" type="button"> Continuar comprando </button>
+					<button class="btn btn--primary" id="modal-added-checkout" type="button"> Finalizar compra </button>
+				</div>
+			</div>
+		</div>
+		<!-- MODAL LOGIN REQUERIDO (compras / favoritos) -->
+		<div class="modal" id="modal-fav-login" hidden>
+			<div class="modal__box">
+				<p id="modal-fav-login-text"> Necesitas iniciar sesión para continuar </p>
+				<div class="modal__actions">
+					<button class="btn btn--ghost" id="modal-fav-cancel" type="button"> Cancelar </button>
+					<button class="btn btn--primary" id="modal-fav-login-btn" type="button"> Entrar </button>
+				</div>
+			</div>
+		</div>
+		<!-- MODAL LOGIN -->
+		<div class="modal" id="modal-login" hidden>
+			<div class="modal__box modal__box--form">
+				<button class="modal__close" id="login-close" type="button" aria-label="Cerrar"> ✕ </button>
+				<h2 id="login-title"> Entrar </h2>
+				<form id="login-form">
+					<label> Correo electrónico <input type="email" id="login-email" required> </label>
+					<label> Contraseña <input type="password" id="login-password" required minlength="4"> </label>
+					<button class="btn btn--primary" type="submit"> Entrar </button>
+				</form>
+				<p class="modal__switch"> ¿No tienes una cuenta? <button type="button" id="go-signup"> Crear cuenta </button> </p>
+			</div>
+		</div>
+		<!-- MODAL BOLSA / CARRITO -->
+		<div class="modal" id="modal-cart" hidden>
+			<div class="modal__box modal__box--cart">
+				<button class="modal__close" id="cart-close" type="button" aria-label="Cerrar"> ✕ </button>
+				<h2> Tu bolsa </h2>
+				<div id="cart-items"></div>
+				<p class="cart-empty" id="cart-empty" hidden> Tu bolsa está vacía </p>
+				<div class="cart-total">
+					<span> Total </span>
+					<strong id="cart-total-value"> R$ 0,00 </strong>
+				</div>
+				<button class="btn btn--primary btn--full" id="cart-checkout"> Finalizar compra por WhatsApp </button>
+			</div>
+		</div>
+		<script src="./script.js"></script>
+	</body>
+</html>
