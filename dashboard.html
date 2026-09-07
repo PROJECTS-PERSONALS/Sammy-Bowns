@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title> Panel administrativo — Sammy Bowns </title>
+		<meta name="robots" content="noindex, nofollow">
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Work+Sans:wght@400;500;600;700&display=swap">
+		<link rel="stylesheet" href="./styles.css">
+		<link rel="stylesheet" href="./dashboard.css">
+	</head>
+	<body class="dash-body">
+		<!-- PANTALLA DE LOGIN -->
+		<main id="dash-view-login" class="dash-login">
+			<div class="dash-login__card">
+				<img src="./img/Logo.jpeg" alt="Sammy Bowns" class="dash-login__logo">
+				<h1> Panel administrativo </h1>
+				<p class="dash-login__hint"> Acceso exclusivo para el administrador de Sammy Bowns. </p>
+				<form id="dash-login-form">
+					<label> Correo electrónico <input type="email" id="dash-email" required autocomplete="username" placeholder="ventasammybowns@gmail.com"> </label>
+					<label> Contraseña <input type="password" id="dash-password" required autocomplete="current-password"> </label>
+					<p class="dash-login__error" id="dash-login-error" hidden></p>
+					<button class="btn btn--primary btn--full" type="submit" id="dash-login-submit"> Entrar al panel </button>
+				</form>
+				<a href="./index.html" class="btn-link dash-login__back"> ← Volver a la tienda </a>
+			</div>
+		</main>
+		<!-- DASHBOARD (requiere sesión válida) -->
+		<div id="dash-app" hidden>
+			<aside class="dash-sidebar">
+				<div class="dash-sidebar__brand">
+					<img src="./img/Logo.jpeg" alt="Sammy Bowns">
+					<span> Sammy Bowns </span>
+				</div>
+				<nav class="dash-nav">
+					<button class="dash-nav__item is-active" data-dash-tab="resumen" type="button"> 📊 Resumen </button>
+					<button class="dash-nav__item" data-dash-tab="productos" type="button"> 🎀 Productos </button>
+					<button class="dash-nav__item" data-dash-tab="categorias" type="button"> 🗂️ Categorías </button>
+					<button class="dash-nav__item" data-dash-tab="tienda" type="button"> ⚙️ Información de la tienda </button>
+				</nav>
+				<div class="dash-sidebar__footer">
+					<div class="dash-profile">
+						<span class="dash-profile__avatar"> 👤 </span>
+						<div>
+							<strong id="dash-admin-email"> admin </strong>
+							<span> Administrador </span>
+						</div>
+					</div>
+					<button class="btn btn--ghost btn--full" id="dash-logout" type="button"> Cerrar sesión </button>
+				</div>
+			</aside>
+			<div class="dash-main">
+				<header class="dash-header">
+					<button class="dash-mobile-toggle" id="dash-mobile-toggle" type="button" aria-label="Abrir menú"> ☰ </button>
+					<h1 id="dash-header-title"> Resumen </h1>
+					<span class="dash-session-note" id="dash-session-expiry"></span>
+				</header>
+				<!-- RESUMEN -->
+				<section class="dash-panel is-active" id="dash-panel-resumen">
+					<div class="dash-stats">
+						<div class="dash-stat-card">
+							<span class="dash-stat-card__label"> Productos activos </span>
+							<strong id="stat-active-products"> 0 </strong>
+						</div>
+						<div class="dash-stat-card">
+							<span class="dash-stat-card__label"> Productos inactivos </span>
+							<strong id="stat-inactive-products"> 0 </strong>
+						</div>
+						<div class="dash-stat-card">
+							<span class="dash-stat-card__label"> Categorías </span>
+							<strong id="stat-categories"> 0 </strong>
+						</div>
+						<div class="dash-stat-card">
+							<span class="dash-stat-card__label"> En promoción </span>
+							<strong id="stat-promo"> 0 </strong>
+						</div>
+					</div>
+					<p class="dash-hint">
+						Los cambios que hagas en Productos, Categorías o Información de la tienda se
+						guardan de inmediato y se reflejan en la tienda pública (<a href="./index.html" target="_blank">index.html</a>)
+						sin necesidad de recargar nada manualmente.
+					</p>
+				</section>
+				<!-- PRODUCTOS -->
+				<section class="dash-panel" id="dash-panel-productos">
+					<div class="dash-panel__head">
+						<h2> Productos </h2>
+						<button class="btn btn--primary" id="dash-new-product" type="button"> + Nuevo producto </button>
+					</div>
+					<div class="dash-table-wrap">
+						<table class="dash-table" id="dash-products-table">
+							<thead>
+								<tr> 
+                                    <th> Imagen </th> 
+                                    <th> Nombre </th> 
+                                    <th> Categoría </th>
+                                    <th> Precio </th> 
+                                    <th> Estado </th> 
+                                    <th> Destacado </th> 
+                                    <th> Acciones </th> 
+                                </tr>
+							</thead>
+							<tbody id="dash-products-tbody"></tbody>
+						</table>
+					</div>
+				</section>
+                <!-- CATEGORÍAS -->
+				<section class="dash-panel" id="dash-panel-categorias">
+					<div class="dash-panel__head">
+						<h2> Categorías </h2>
+						<button class="btn btn--primary" id="dash-new-category" type="button"> + Nueva categoría </button>
+					</div>
+					<div class="dash-table-wrap">
+						<table class="dash-table" id="dash-categories-table">
+							<thead>
+								<tr>
+									<th> Imagen </th>
+									<th> Categoría </th>
+									<th> Productos </th>
+									<th> Acciones </th>
+								</tr>
+							</thead>
+							<tbody id="dash-categories-tbody"></tbody>
+						</table>
+					</div>
+				</section>
+				<!-- INFORMACIÓN DE LA TIENDA -->
+				<section class="dash-panel" id="dash-panel-tienda">
+					<h2> Información de la tienda </h2>
+					<form id="dash-store-form" class="dash-form dash-form--wide">
+						<div class="dash-form__row">
+							<label> Nombre de la tienda <input type="text" id="store-name"></label>
+							<label> Correo de contacto <input type="email" id="store-email"></label>
+						</div>
+						<label> Frase de la marca <input type="text" id="store-tagline"></label>
+						<div class="dash-form__row">
+							<label> Número de WhatsApp (solo dígitos, con código de país) <input type="text" id="store-whatsapp"></label>
+							<label> Mensaje inicial de WhatsApp <input type="text" id="store-whatsapp-msg"></label>
+						</div>
+						<div class="dash-form__row">
+							<label> Enlace de TikTok <input type="text" id="store-tiktok"></label>
+							<label> Enlace de Instagram <input type="text" id="store-instagram"></label>
+						</div>
+						<button class="btn btn--primary" type="submit"> Guardar información </button>
+						<p class="dash-save-msg" id="store-saved" hidden> ✓ Información guardada correctamente </p>
+					</form>
+				</section>
+			</div>
+		</div>
+		<!-- MODAL: PRODUCTO (crear / editar) -->
+		<div class="modal" id="dash-modal-product" hidden>
+			<div class="modal__box dash-modal__box">
+				<button class="modal__close" id="dash-product-modal-close" type="button" aria-label="Cerrar"> ✕ </button>
+				<h2 id="dash-product-modal-title"> Nuevo producto </h2>
+				<form id="dash-product-form" class="dash-form">
+					<input type="hidden" id="p-id">
+					<div class="dash-form__row">
+						<label> Nombre <input type="text" id="p-name" required></label>
+						<label> Categoría <select id="p-category"></select></label>
+					</div>
+					<label> Descripción (opcional) <textarea id="p-description" rows="2"></textarea></label>
+					<div class="dash-form__row">
+						<label> Precio <input type="number" id="p-price" min="0" required></label>
+						<label> Precio anterior (opcional) <input type="number" id="p-oldprice" min="0"></label>
+					</div>
+					<label> Ruta de imagen (dentro de "img/") <input type="text" id="p-image" placeholder="img/categoria/archivo.jpeg"></label>
+					<div class="dash-form__row">
+						<label class="dash-checkbox"><input type="checkbox" id="p-active" checked> Producto activo </label>
+						<label class="dash-checkbox"><input type="checkbox" id="p-featured"> Destacado </label>
+						<label class="dash-checkbox"><input type="checkbox" id="p-promo"> En promoción </label>
+					</div>
+					<div class="modal__actions">
+						<button type="button" class="btn btn--ghost" id="dash-product-cancel"> Cancelar </button>
+						<button type="submit" class="btn btn--primary"> Guardar producto </button>
+					</div>
+				</form>
+			</div>
+		</div>
+		<!-- MODAL: CATEGORÍA (crear / editar) -->
+		<div class="modal" id="dash-modal-category" hidden>
+			<div class="modal__box dash-modal__box">
+				<button class="modal__close" id="dash-category-modal-close" type="button" aria-label="Cerrar"> ✕ </button>
+				<h2 id="dash-category-modal-title"> Nueva categoría</h2>
+				<form id="dash-category-form" class="dash-form">
+					<input type="hidden" id="c-id">
+					<label> Nombre <input type="text" id="c-name" required></label>
+					<div class="dash-form__row">
+						<label> Emoji / ícono <input type="text" id="c-emoji" maxlength="4" placeholder="🎀"></label>
+						<label> Ruta de imagen (opcional) <input type="text" id="c-image" placeholder="img/categoria/foto.jpeg"></label>
+					</div>
+					<div class="modal__actions">
+						<button type="button" class="btn btn--ghost" id="dash-category-cancel"> Cancelar </button>
+						<button type="submit" class="btn btn--primary"> Guardar categoría </button>
+					</div>
+				</form>
+			</div>
+		</div>
+		<script src="./dashboard.js"></script>
+	</body>
+</html>
