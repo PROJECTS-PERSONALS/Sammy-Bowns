@@ -1,307 +1,340 @@
-# Sammy Bowns — Tienda online
+# Sammy Bowns — Tienda online + Panel administrativo + API
 
-Landing page / tienda online de accesorios para el cabello (lazos, diademas,
-clips, kits de peinado, etc.), con panel administrativo separado para
-gestionar productos, categorías e información de la marca.
+Landing page de accesorios para el cabello (lazos, diademas, clips, kits de
+peinado), con panel administrativo y backend propio (API REST) que conecta
+ambos. Los 104 productos y 11 categorías del catálogo son reales — se
+migraron desde el proyecto anterior, no son datos de ejemplo.
 
 ## 1. Descripción del proyecto
 
-Sitio de una sola tienda (Sammy Bowns) con:
-- Catálogo de productos organizado por categorías reales del negocio.
-- Buscador, filtros por categoría y ordenamiento.
-- Carrito de compra sin necesidad de registro, con checkout por WhatsApp.
-- Panel administrativo (`dashboard.html`) para gestionar el catálogo sin
-  tocar código.
+- **frontend/** — la tienda pública (`index.html`). Cualquiera puede
+  entrar, buscar, filtrar por categoría, armar su carrito y finalizar la
+  compra por WhatsApp, **sin necesidad de crear una cuenta**.
+- **dashboard/** — panel exclusivo del administrador. Requiere iniciar
+  sesión contra el backend para gestionar productos, categorías e
+  información de la tienda.
+- **backend/** — API REST (Node.js + Express) que sirve los datos al
+  frontend y al dashboard, y protege con autenticación (JWT) todas las
+  operaciones de escritura.
 
-## 2. Objetivo
-
-Permitir que el dueño de la tienda reciba pedidos por WhatsApp desde una
-página moderna y navegable, y que pueda mantener el catálogo actualizado
-(agregar/editar/quitar productos y categorías) sin depender de un
-desarrollador para cada cambio.
-
-## 3. Tecnologías
-
-- HTML5, CSS3, JavaScript (vanilla, sin frameworks ni build step).
-- `localStorage` del navegador como almacenamiento de contenido (productos,
-  categorías, información de la tienda) mientras no exista un backend.
-- Sin backend propio incluido en esta entrega — ver sección 10 para lo que
-  hace falta agregar para producción.
-
-## 4. Estructura de carpetas
+## 2. Arquitectura
 
 ```
-Sammy (Pr)/
-├── index.html          Tienda pública
-├── styles.css          Estilos de la tienda pública
-├── script.js           Lógica de la tienda pública (catálogo, carrito, etc.)
-├── dashboard.html       Panel administrativo
-├── dashboard.css        Estilos del panel administrativo
-├── dashboard.js         Lógica del panel administrativo
-├── README.md            Este documento
-└── img/
-    ├── Logo.jpeg
-    ├── coleccion_escolar/    (fotos reales de esta categoría)
-    ├── coleccion_princesas/
-    ├── coleccion_bebes/      (vacía por ahora — agrega fotos aquí)
-    ├── fiestas/              (vacía por ahora)
-    ├── navidad/
-    ├── diademas/
-    ├── clips_variados/
-    ├── kanekalon/            (vacía por ahora)
-    ├── kit_para_peinados/
-    ├── colombia/
-    └── combos_promo/
+Cliente (navegador)
+   │
+   ├── frontend/index.html  ──┐
+   │                          │  GET /api/products, /api/categories, /api/site
+   └── dashboard/dashboard.html│  (+ POST/PUT/PATCH/DELETE con JWT para el admin)
+                              ▼
+                     backend/server.js (Express)
+                              │
+                              ▼
+                 backend/data/*.json (persistencia)
 ```
 
-Esta estructura de `img/` ya existía en el proyecto (una carpeta por
-categoría) y se respetó tal cual — no se inventaron rutas ni carpetas
-nuevas. Los productos actuales usan directamente las fotos que ya estaban
-en cada carpeta.
+El frontend y el dashboard son **100% estáticos** (HTML/CSS/JS sin
+compilación) — se pueden publicar en GitHub Pages. El backend es la única
+parte que necesita un servidor Node.js corriendo.
 
-## 5. Estructura de imágenes
-
-- Cada categoría tiene su propia carpeta dentro de `img/`.
-- El nombre y precio de cada producto se generaron automáticamente a partir
-  del nombre del archivo (ejemplo: `PAR ESCOLAR REF 001_24000.jpeg` se
-  convirtió en el producto "Par Escolar REF 001" a $24.000). Revisa esos
-  nombres/precios desde el panel y ajusta lo que no sea exacto.
-- Las categorías `coleccion_bebes`, `fiestas` y `kanekalon` ya existen como
-  categorías activas en la tienda, pero sus carpetas de imágenes están
-  vacías — agrega ahí las fotos reales y luego crea los productos
-  correspondientes desde el panel.
-
-## 6. Funcionamiento de categorías
-
-- Las categorías se muestran en una barra lateral en escritorio (con foto o
-  emoji + nombre + cantidad de productos) y dentro del menú hamburguesa en
-  móvil.
-- Al seleccionar una categoría se actualiza el título, la cantidad de
-  resultados, el banner (si la categoría tiene foto) y la grilla de
-  productos — todo sin recargar la página.
-- "Todos los productos" vuelve a mostrar el catálogo completo.
-
-## 7. Funcionamiento del carrito
-
-- El cliente agrega productos sin necesidad de iniciar sesión ni
-  registrarse.
-- Se pueden aumentar/disminuir cantidades y eliminar productos desde el
-  modal del carrito.
-- "Finalizar compra por WhatsApp" arma automáticamente un mensaje con el
-  resumen del pedido (productos, cantidades, total) y lo abre en WhatsApp.
-
-## 8. Funcionamiento del buscador
-
-- Input de búsqueda en el header (escritorio) y detrás del ícono de lupa
-  (móvil). Busca por nombre de producto y por categoría, en tiempo real.
-- Estos dos bloques de búsqueda (escritorio/móvil) están completamente
-  desacoplados del resto del sitio: cada elemento se busca de forma
-  independiente en `script.js` y se comprueba que exista antes de usarlo.
-  Si en algún momento se elimina o rediseña la barra de búsqueda móvil,
-  categorías, carrito, menú y navegación seguirán funcionando con
-  normalidad.
-
-## 9. Funcionamiento del dashboard
-
-`dashboard.html` es un archivo completamente separado de la tienda pública.
-Se accede de forma discreta desde el logo de `index.html`:
-- **Escritorio:** doble clic sobre el logo.
-- **Móvil:** mantener presionado el logo (~700 ms).
-
-Un clic normal en el logo sigue llevando a la tienda con normalidad —el
-acceso administrativo no es visible ni evidente para un cliente común.
-
-Dentro del dashboard hay tres secciones: **Productos**, **Categorías** e
-**Información de la tienda**, además de un resumen con estadísticas
-básicas. Los cambios se guardan de inmediato y se reflejan en la tienda
-pública sin recargar nada manualmente (ambos archivos leen/escriben las
-mismas claves de `localStorage`).
-
-## 10. Sistema de autenticación — LEE ESTO ANTES DE USAR EL PANEL
-
-**Este proyecto es actualmente solo frontend.** Por eso, y siguiendo buenas
-prácticas de seguridad, `dashboard.js` **no contiene ninguna contraseña**,
-ni siquiera en forma de hash o de ejemplo. La pantalla de login llama a:
+## 3. Estructura de carpetas
 
 ```
-POST /api/admin/login   { email, password } → { token, expiresAt }
-GET  /api/admin/verify  (Authorization: Bearer <token>) → 200 si es válido
-POST /api/admin/logout  (Authorization: Bearer <token>)
+/
+├── frontend/                 Tienda pública (deploy en GitHub Pages)
+│   ├── index.html
+│   ├── css/styles.css
+│   ├── js/
+│   │   ├── config.js         URL del backend (API_BASE_URL)
+│   │   └── script.js         Catálogo, carrito, búsqueda, checkout WhatsApp
+│   └── img/                  Fotos reales de productos y categorías
+│       ├── Logo.jpeg
+│       ├── clips_variados/
+│       ├── coleccion_bebes/  (vacía: aún sin fotos — ver sección 20)
+│       ├── coleccion_escolar/
+│       ├── coleccion_princesas/
+│       ├── colombia/
+│       ├── combos_promo/
+│       ├── diademas/
+│       ├── fiestas/          (vacía: aún sin fotos)
+│       ├── kanekalon/        (vacía: aún sin fotos)
+│       ├── kit_para_peinados/
+│       └── navidad/
+│
+├── dashboard/                 Panel administrativo (deploy junto al frontend)
+│   ├── dashboard.html
+│   ├── css/dashboard.css
+│   └── js/
+│       ├── config.js          Misma URL del backend que frontend/js/config.js
+│       └── dashboard.js       Login + CRUD contra la API
+│
+├── backend/                   API REST (deploy en un servicio Node.js aparte)
+│   ├── server.js
+│   ├── package.json
+│   ├── .env                   Credenciales REALES para correr localmente (NO se sube a git)
+│   ├── .env.example           Plantilla sin secretos
+│   ├── .gitignore
+│   ├── routes/                auth / products / categories / site
+│   ├── controllers/           Lógica de cada recurso + validación de datos
+│   ├── middleware/            requireAuth (JWT) y manejo de errores
+│   └── data/
+│       ├── db.js              Acceso centralizado a los JSON (escritura atómica)
+│       ├── products.json      104 productos reales
+│       ├── categories.json    11 categorías reales
+│       └── site.json          Nombre, frase, contacto, redes, WhatsApp
+│
+├── .gitignore                 Raíz del repo
+└── README.md                  Este archivo
 ```
 
-**Mientras ese backend no exista, el login fallará mostrando un aviso.**
-Esto es intencional: es preferible que el panel no funcione a que simule
-una seguridad falsa comparando `email`/`password` dentro del JavaScript del
-navegador (cualquier persona podría leer y burlar esa lógica con las
-herramientas de desarrollador del navegador).
+**Por qué el logo se ve en `dashboard/` sin duplicar el archivo:** el
+dashboard referencia `../frontend/img/Logo.jpeg` y `../frontend/css/styles.css`
+(carpetas hermanas) en vez de tener su propia copia — se evita duplicar
+imágenes.
 
-### Ejemplo de backend mínimo (Node.js + Express + bcrypt + JWT)
+## 4. Frontend
 
-Esto es una **referencia**, no está incluida en el proyecto ni desplegada.
-Debes crearla en un servidor propio (o función serverless) y **nunca**
-subir el archivo `.env` a ningún repositorio público.
+`frontend/js/script.js` ya no tiene los productos escritos a mano: al
+cargar la página hace `fetch` a `/api/products`, `/api/categories` y
+`/api/site`. Si el backend no responde (servidor caído, sin internet), usa
+la última copia guardada en `localStorage` como respaldo, para no dejar la
+tienda completamente vacía.
 
-```js
-// server.js (ejemplo de referencia — no incluido en este proyecto)
-require("dotenv").config();
-const express = require("express");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
+Funcionalidades (todas conservadas del proyecto anterior):
+- Catálogo con sidebar de categorías (imagen real o emoji + contador).
+- Buscador (por nombre y categoría), con mensaje de "sin resultados".
+- Ordenar por: relevancia, más cotizado, precio, alfabético, más reciente/antiguo.
+- Carrito sin registro: agregar, cambiar cantidades, eliminar, ver total.
+- Botón flotante de WhatsApp con mensaje configurable.
+- Menú hamburguesa en móvil con categorías y navegación.
+- Acceso discreto al dashboard: doble clic (o mantener presionado en
+  celular) sobre el logo.
 
-const app = express();
-app.use(express.json());
+## 5. Backend
 
-// Variables de entorno (NUNCA en el frontend ni en el repositorio):
-// ADMIN_EMAIL=ventasammybowns@gmail.com
-// ADMIN_PASSWORD_HASH=<hash bcrypt generado UNA VEZ con bcrypt.hash(password, 12)>
-// JWT_SECRET=<cadena aleatoria larga>
+API REST mínima y sin dependencias innecesarias: `express`, `cors`,
+`dotenv`, `jsonwebtoken`, `bcryptjs`.
 
-app.post("/api/admin/login", async (req, res) => {
-  const { email, password } = req.body;
-  const validEmail = email?.toLowerCase() === process.env.ADMIN_EMAIL.toLowerCase();
-  const validPassword = validEmail && await bcrypt.compare(password, process.env.ADMIN_PASSWORD_HASH);
+| Método | Ruta                  | Auth | Descripción                          |
+|--------|-----------------------|:----:|---------------------------------------|
+| POST   | `/api/auth/login`     | No   | Login del admin → devuelve JWT        |
+| GET    | `/api/auth/verify`    | Sí   | Verifica si el token sigue siendo válido |
+| GET    | `/api/products`       | No   | Lista de productos (tienda pública)   |
+| POST   | `/api/products`       | Sí   | Crear producto                        |
+| PUT/PATCH | `/api/products/:id` | Sí   | Editar producto                       |
+| DELETE | `/api/products/:id`   | Sí   | Eliminar producto                     |
+| GET    | `/api/categories`     | No   | Lista de categorías                   |
+| POST   | `/api/categories`     | Sí   | Crear categoría                       |
+| PUT/PATCH | `/api/categories/:id` | Sí | Editar categoría (renombrar reasigna productos) |
+| DELETE | `/api/categories/:id` | Sí   | Eliminar (bloqueado si hay productos usándola: 409) |
+| GET    | `/api/site`           | No   | Información pública de la tienda      |
+| PUT/PATCH | `/api/site`         | Sí   | Editar información de la tienda       |
 
-  if (!validEmail || !validPassword) {
-    return res.status(401).json({ message: "Correo o contraseña incorrectos." });
-  }
+La persistencia es en archivos JSON (`backend/data/`), con escritura
+atómica (archivo temporal + rename) para no corromper los datos si el
+proceso se interrumpe a mitad de un guardado. Es intencionalmente simple
+porque el catálogo es pequeño — está aislada detrás de `data/db.js`, así
+que migrar a una base de datos real más adelante no requiere tocar el
+resto del backend.
 
-  const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: "2h" });
-  res.json({ token, expiresAt: Date.now() + 2 * 60 * 60 * 1000 });
-});
+## 6. Dashboard
 
-app.get("/api/admin/verify", (req, res) => {
-  const token = req.headers.authorization?.replace("Bearer ", "");
-  try {
-    jwt.verify(token, process.env.JWT_SECRET);
-    res.sendStatus(200);
-  } catch {
-    res.sendStatus(401);
-  }
-});
+Accesible solo mediante doble clic (o mantener presionado en móvil) sobre
+el logo de la tienda — no aparece en ningún menú público. Al entrar sin
+sesión válida, `dashboard.js` verifica el token contra el backend
+(`GET /api/auth/verify`) y, si no es válido, muestra el login — **la
+protección real vive en el backend**, no en ocultar el HTML.
 
-app.post("/api/admin/logout", (req, res) => {
-  // Con JWT sin estado no hay nada que invalidar en el servidor a menos que
-  // se use una lista de revocación / Redis. Aquí basta con responder 200;
-  // el frontend borra el token de sessionStorage.
-  res.sendStatus(200);
-});
+Secciones: Resumen (estadísticas), Productos (crear/editar/eliminar/activar),
+Categorías (crear/editar/eliminar — bloqueado si hay productos asociados),
+Información de la tienda (nombre, frase, contacto, WhatsApp, redes
+sociales).
 
-app.listen(3000);
+## 7. API — ejemplos rápidos
+
+```bash
+# Login
+curl -X POST http://localhost:4000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"ventasammybowns@gmail.com","password":"tu-contraseña"}'
+
+# Crear un producto (usando el token que devolvió el login)
+curl -X POST http://localhost:4000/api/products \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer TU_TOKEN" \
+  -d '{"name":"Moño Satinado Rosa","category":"Diademas","price":25000}'
 ```
 
-Para generar el hash de la contraseña UNA sola vez (en tu máquina, nunca en
-el frontend):
+## 8. Variables de entorno
 
-```js
-const bcrypt = require("bcrypt");
-bcrypt.hash("la-contraseña-real", 12).then(console.log);
+Ver `backend/.env.example`. Resumen:
+
+| Variable | Descripción |
+|---|---|
+| `PORT` | Puerto del servidor (por defecto 4000) |
+| `ADMIN_EMAIL` | Correo del administrador |
+| `ADMIN_PASSWORD_HASH` | Hash **bcrypt** de la contraseña (nunca la contraseña en texto plano) |
+| `JWT_SECRET` | Cadena aleatoria larga para firmar los tokens de sesión |
+| `JWT_EXPIRES_IN` | Duración de la sesión (ej. `2h`) |
+| `CORS_ORIGIN` | Dominios permitidos para consumir la API, separados por coma |
+
+Generar un hash bcrypt nuevo (por ejemplo, para cambiar la contraseña):
+```bash
+node -e "console.log(require('bcryptjs').hashSync('tu-nueva-contraseña', 12))"
+```
+Generar un `JWT_SECRET` nuevo:
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 ```
 
-Ese hash resultante es el que va en la variable de entorno
-`ADMIN_PASSWORD_HASH` del servidor — nunca en el código del sitio.
+## 9. Instalación
 
-### Buenas prácticas adicionales recomendadas para producción
-
-- Servir el sitio y la API por HTTPS.
-- Usar cookies `HttpOnly` + `Secure` en vez de guardar el token en
-  `sessionStorage`, si el backend y el frontend comparten dominio.
-- Limitar los intentos de login (rate limiting) para evitar fuerza bruta.
-- Expirar el token (ya contemplado arriba con `expiresIn`) y revalidar la
-  sesión en cada carga del dashboard (ya implementado en `dashboard.js`
-  mediante `GET /api/admin/verify`).
-- Cuando el backend maneje también los productos/categorías, cada endpoint
-  de escritura (crear/editar/eliminar) debe validar el token igual que
-  `/api/admin/verify` — no basta con ocultar los botones en el frontend.
-
-## 11. CRUD
-
-Mientras no exista backend, el CRUD de productos, categorías e información
-de la tienda funciona guardando en `localStorage` (una vez que se ha
-iniciado sesión correctamente). Las funciones `saveProducts()`,
-`saveCategories()` y `saveConfig()` en `dashboard.js` están centralizadas
-para que, cuando el backend esté listo, sea sencillo reemplazarlas por
-llamadas `fetch()` autenticadas (`Authorization: Bearer <token>`) a tus
-propios endpoints (`/api/products`, `/api/categories`, `/api/config`).
-
-- **Productos:** crear, editar, eliminar, activar/desactivar, marcar como
-  destacado o en promoción, cambiar nombre/descripción/precio/precio
-  anterior/categoría/imagen.
-- **Categorías:** crear, editar, eliminar, cambiar nombre/emoji/imagen.
-- **Información de la tienda:** nombre, frase de marca, correo, WhatsApp
-  (número y mensaje inicial), TikTok, Instagram.
-
-## 12. Configuración
-
-Los valores por defecto (antes de que el administrador guarde cambios)
-viven en `script.js`, en las constantes `DEFAULT_CONFIG`,
-`DEFAULT_CATEGORIES` y `DEFAULT_PRODUCTS`.
-
-## 13. Variables de entorno
-
-No aplica al frontend actual (no debe llevar secretos). Para el backend de
-referencia de la sección 10: `ADMIN_EMAIL`, `ADMIN_PASSWORD_HASH`,
-`JWT_SECRET`.
-
-## 14. Instalación
-
-No requiere instalación de dependencias para la parte frontend. Basta con
-servir la carpeta con cualquier servidor estático (o abrir `index.html`
-directamente en el navegador para pruebas rápidas).
-
-## 15. Ejecución
-
-```
-# Opción simple con Python (o cualquier servidor estático equivalente)
-cd "Sammy (Pr)"
-python3 -m http.server 8080
+```bash
+cd backend
+npm install
 ```
 
-Luego visita `http://localhost:8080/index.html` para la tienda y
-`http://localhost:8080/dashboard.html` para el panel (recuerda que el login
-no funcionará hasta desplegar el backend de la sección 10).
+El frontend y el dashboard no requieren instalación (HTML/CSS/JS puro).
 
-## 16. Configuración para producción
+## 10. Ejecución local
 
-1. Desplegar el backend de autenticación (sección 10) con HTTPS.
-2. Migrar productos/categorías/información de la tienda de `localStorage` a
-   una base de datos real, sirviéndolos también a través de tu API.
-3. Servir `index.html`/`dashboard.html` desde un hosting con HTTPS.
-4. Revisar los enlaces reales de TikTok e Instagram en `script.js`
-   (`DEFAULT_CONFIG.tiktok` / `DEFAULT_CONFIG.instagram`) — actualmente son
-   placeholders.
+```bash
+# Terminal 1 — backend
+cd backend
+npm start
+# Escuchando en http://localhost:4000
 
-## 17. Seguridad
+# Terminal 2 — frontend + dashboard (cualquier servidor estático)
+cd ..
+python3 -m http.server 5500
+# Tienda:     http://localhost:5500/frontend/index.html
+# Dashboard:  http://localhost:5500/dashboard/dashboard.html
+```
 
-- La contraseña del administrador **nunca** está en el código del
-  frontend.
-- El acceso al dashboard requiere un token válido emitido por el backend;
-  ese token se revalida en cada carga (`/api/admin/verify`), así que
-  revocar el acceso o cerrar sesión tiene efecto real y no depende
-  únicamente de ocultar botones con CSS.
-- Sin backend desplegado, el panel simplemente no deja entrar — es un
-  comportamiento intencional, no un error.
+`backend/.env` ya trae credenciales de prueba funcionando para que puedas
+entrar al dashboard de inmediato (ver sección 11). **Cámbialas antes de
+publicar el sitio.**
 
-## 18. Mantenimiento
+## 11. Configuración del administrador
 
-- Para agregar productos de las categorías aún vacías (`coleccion_bebes`,
-  `fiestas`, `kanekalon`): sube las fotos a su carpeta dentro de `img/` y
-  crea los productos desde el panel indicando esa ruta de imagen.
-- Revisa periódicamente que los nombres/precios generados automáticamente
-  desde los archivos de imagen sigan siendo correctos.
+Credenciales de prueba incluidas en `backend/.env` (local, no se sube a git):
+- **Correo:** `ventasammybowns@gmail.com`
+- **Contraseña:** `sammy2026`
 
-## 19. Rutas principales
+Para producción, genera tus propias credenciales (sección 8) y configúralas
+como variables de entorno en tu servicio de hosting del backend — nunca
+las escribas en ningún archivo del frontend/dashboard.
 
-- `/index.html` — tienda pública.
-- `/dashboard.html` — panel administrativo (acceso vía doble clic /
-  mantener presionado el logo de la tienda).
+## 12. CRUD
 
-## 20. Consideraciones importantes
+Ver tabla de la sección 5. Todo el CRUD (crear/editar/eliminar productos y
+categorías, editar información de la tienda) requiere el token del admin;
+sin él, el backend responde `401` sin importar qué haga el frontend.
 
-- El proyecto sigue siendo 100% funcional como tienda pública sin backend:
-  catálogo, búsqueda, carrito y checkout por WhatsApp funcionan hoy mismo.
-- El panel administrativo está completo en su interfaz, pero **requiere el
-  backend de autenticación** antes de poder iniciar sesión — esto es
-  deliberado para no exponer una seguridad falsa.
-- No se eliminó ninguna funcionalidad existente de la tienda pública; el
-  panel administrativo se movió a sus propios archivos para mantener la
-  arquitectura organizada, tal como se solicitó.
+## 13. Carrito
+
+Sin registro. Persiste en `localStorage` del navegador del cliente
+(independiente del backend — el carrito es solo del dispositivo del
+cliente). Flujo: agregar → ajustar cantidades → ver total → **Finalizar
+compra por WhatsApp**.
+
+## 14. WhatsApp
+
+El botón flotante y el checkout arman automáticamente el link
+`https://wa.me/<número>?text=<mensaje>` usando el número y el mensaje
+configurados en **Información de la tienda** del dashboard (o los valores
+por defecto si nunca se han editado).
+
+## 15. Deploy del frontend (GitHub Pages)
+
+1. En la configuración de GitHub Pages del repositorio, elige la carpeta
+   `frontend` como origen (Settings → Pages → Source → selecciona la rama
+   y la carpeta `/frontend`; o copia el contenido de `frontend/` a una
+   rama `gh-pages`/carpeta `docs` si tu flujo de trabajo lo requiere).
+2. Haz lo mismo para `dashboard/` (puede vivir en la misma publicación,
+   GitHub Pages sirve cualquier carpeta del sitio).
+3. Antes de publicar, actualiza `frontend/js/config.js` **y**
+   `dashboard/js/config.js` con la URL real de tu backend ya desplegado
+   (ver sección siguiente) — mientras apunten a `localhost`, el sitio
+   publicado no podrá cargar productos.
+
+## 16. Deploy del backend
+
+`backend/` es un servidor Node.js normal — despliégalo en cualquier
+servicio compatible (Render, Railway, Fly.io, un VPS propio, etc.):
+
+1. Sube la carpeta `backend/` (o el repo completo) al servicio elegido.
+2. Configura las variables de entorno de `backend/.env.example` en el
+   panel del servicio (nunca subas el `.env` real).
+3. Define `CORS_ORIGIN` con el dominio real de tu GitHub Pages, por
+   ejemplo: `https://tu-usuario.github.io`.
+4. Una vez desplegado, copia la URL pública (ej.
+   `https://sammy-bowns-api.onrender.com/api`) en
+   `frontend/js/config.js` y `dashboard/js/config.js`.
+
+## 17. Configuración de CORS
+
+`backend/server.js` solo permite los orígenes listados en `CORS_ORIGIN`
+(separados por coma). En desarrollo local se incluyen los puertos típicos
+de servidores estáticos (5500, 3000). En producción, reemplázalos por el
+dominio real de GitHub Pages — evita dejar `*` si no es necesario.
+
+## 18. Seguridad
+
+- La contraseña del administrador nunca está en texto plano: solo su hash
+  **bcrypt** vive en `ADMIN_PASSWORD_HASH` (variable de entorno del
+  backend).
+- El frontend/dashboard nunca reciben la contraseña ni su hash — solo un
+  token JWT de corta duración tras un login exitoso.
+- Todas las rutas de escritura (`POST`/`PUT`/`PATCH`/`DELETE` de
+  productos, categorías e información del sitio) están protegidas en el
+  **backend** con el middleware `requireAuth`; llamarlas sin un token
+  válido devuelve `401` sin importar qué haga el frontend — se probó
+  explícitamente con `curl` sin token.
+- `.env` está en `.gitignore`: nunca se sube al repositorio.
+- CORS restringido a los orígenes configurados.
+- Los datos de entrada se validan en cada controlador (nombre, precio,
+  categoría, etc.) antes de guardarse.
+- Los mensajes de error nunca incluyen el stack trace ni detalles internos.
+
+## 19. Mantenimiento
+
+- Para agregar fotos a las categorías aún vacías (`coleccion_bebes`,
+  `fiestas`, `kanekalon`): sube las imágenes a su carpeta dentro de
+  `frontend/img/` y crea los productos correspondientes desde el
+  dashboard, indicando esa ruta relativa (ej.
+  `img/coleccion_bebes/mi-foto.jpg`).
+- Si necesitas editar un producto o categoría en lote, puedes modificar
+  directamente `backend/data/products.json` /
+  `backend/data/categories.json` con el servidor detenido (son JSON planos
+  y legibles) — al reiniciar el servidor, los cambios se sirven tal cual.
+
+## 20. Solución de problemas comunes
+
+**"No se pudo conectar con el servidor" en el dashboard o la tienda:**
+el backend no está corriendo, o `config.js` apunta a una URL incorrecta.
+Verifica `npm start` en `backend/` y que `API_BASE_URL` en
+`frontend/js/config.js` / `dashboard/js/config.js` sea la correcta.
+
+**Login rechazado con credenciales que crees correctas:** confirma que
+`ADMIN_EMAIL` y `ADMIN_PASSWORD_HASH` en `backend/.env` correspondan
+realmente a esa contraseña (regenera el hash si tienes dudas, sección 8).
+
+**Imágenes rotas:** confirma que la ruta en `products.json`/
+`categories.json` (campo `image`) coincide exactamente con el archivo
+dentro de `frontend/img/<categoría>/`, incluyendo mayúsculas/acentos. Este
+proyecto tuvo justamente ese problema — algunos nombres de archivo con
+tildes (Ñ, Ó) llegaron corrompidos como `#U00d1`/`#U00d3` en un ida y
+vuelta por GitHub en un entorno Windows; ya se corrigieron los 12 archivos
+afectados en esta entrega. Si vuelve a pasar al subir fotos nuevas,
+revisa la configuración de codificación de nombres de archivo de tu
+cliente Git (`git config core.quotepath false` suele ayudar) o evita
+tildes/eñes en los nombres de archivo nuevos como prevención.
+
+**CORS bloqueando las peticiones:** agrega el origen exacto (protocolo +
+dominio + puerto) desde el que sirves el frontend a `CORS_ORIGIN` en
+`backend/.env`.
+
+**El dashboard no reconoce la sesión tras recargar:** la sesión vive en
+`sessionStorage` (se borra al cerrar la pestaña) y se revalida contra el
+backend en cada carga — si el token venció (por defecto, 2 horas) hay que
+iniciar sesión de nuevo; es el comportamiento esperado.

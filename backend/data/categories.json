@@ -1,0 +1,68 @@
+[
+  {
+    "id": "cat1",
+    "name": "Colección Escolar",
+    "emoji": "🎒",
+    "image": "img/coleccion_escolar/CEBOLLERO REF 001_23000.jpeg"
+  },
+  {
+    "id": "cat2",
+    "name": "Colección Princesas",
+    "emoji": "👑",
+    "image": "img/coleccion_princesas/MAXI ARIEL REF 005- 26000.jpeg"
+  },
+  {
+    "id": "cat3",
+    "name": "Colección Bebés",
+    "emoji": "🍼",
+    "image": ""
+  },
+  {
+    "id": "cat4",
+    "name": "Fiestas",
+    "emoji": "🎉",
+    "image": ""
+  },
+  {
+    "id": "cat5",
+    "name": "Navidad",
+    "emoji": "🎄",
+    "image": "img/navidad/MAXI NAVIDAD_26000.jpeg"
+  },
+  {
+    "id": "cat6",
+    "name": "Diademas",
+    "emoji": "💎",
+    "image": "img/diademas/DIADEMA FLORAL_25000.jpeg"
+  },
+  {
+    "id": "cat7",
+    "name": "Clips Variados",
+    "emoji": "📎",
+    "image": "img/clips_variados/COLERO ANA Y ELSA REF 019_15000.jpeg"
+  },
+  {
+    "id": "cat8",
+    "name": "Kanekalon",
+    "emoji": "💇",
+    "image": ""
+  },
+  {
+    "id": "cat9",
+    "name": "Kit Para Peinados",
+    "emoji": "🎀",
+    "image": "img/kit_para_peinados/CORTA LIGAS - 2000 UNIDAD.jpeg"
+  },
+  {
+    "id": "cat10",
+    "name": "Colombia",
+    "emoji": "🇨🇴",
+    "image": "img/colombia/MAXI CORAZÓN REF002 - 15000.jpeg"
+  },
+  {
+    "id": "cat11",
+    "name": "Combos Promo",
+    "emoji": "🎁",
+    "image": "img/combos_promo/COMBO CHILINDRINA + MUERCILEAGOS_REF 012_51000.jpeg"
+  }
+]

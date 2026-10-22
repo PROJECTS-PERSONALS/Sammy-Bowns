@@ -1,69 +1,18 @@
-/* dashboard.js — Panel administrativo de Sammy Bowns */
+/* dashboard.js — Panel administrativo de Sammy Bowns
+ *
+ * Autenticación real contra el backend (ver /backend). La contraseña
+ * jamás viaja ni se guarda en este archivo ni en el navegador — solo se
+ * envía una vez al hacer login, y lo único que queda guardado en
+ * sessionStorage es el token (JWT) que el servidor entrega. Ese token es
+ * lo que se envía en cada operación administrativa (Authorization: Bearer).
+ *
+ * Las rutas de escritura (crear/editar/eliminar) están protegidas en el
+ * BACKEND, no solo aquí: si alguien intenta llamarlas sin un token válido
+ * (con curl, Postman, etc.) el servidor las rechaza con 401, sin importar
+ * lo que haga este archivo.
+ */
 
-const ADMIN_EMAIL = "ventasammybowns@gmail.com";
-const ADMIN_PASSWORD_HASH = "f70a427801a6354219fcb9f543326d30f53cc28f6f9bd7a8334a3715cd7bd6b5"; // sha256
-const SESSION_KEY = "dash_session"; // { email, expiresAt } — nunca guarda la contraseña
-const SESSION_DURATION_MS = 2 * 60 * 60 * 1000; // 2 horas
-
-// SHA-256 en JS puro (sin Web Crypto). BUG CORREGIDO: crypto.subtle solo
-// existe en "contextos seguros" (https:// o http://localhost); si el
-// dashboard se abre haciendo doble clic en el archivo (file://) o desde un
-// hosting sin HTTPS, crypto.subtle es undefined y el login fallaba en
-// silencio (la promesa se rechazaba sin mostrar ningún mensaje). Esta
-// implementación no depende del navegador ni del protocolo, así que
-// funciona siempre. Produce exactamente el mismo resultado que
-// crypto.subtle.digest("SHA-256", ...) — ya verificado.
-function sha256(ascii) {
-	function rightRotate(v, n) { return (v >>> n) | (v << (32 - n)); }
-	const maxWord = Math.pow(2, 32);
-	let result = "";
-	const words = [];
-	const asciiBitLength = ascii.length * 8;
-	let hash = [];
-	const k = [];
-	let primeCounter = 0;
-	const isComposite = {};
-	for (let candidate = 2; primeCounter < 64; candidate++) {
-		if (!isComposite[candidate]) {
-			for (let i = 0; i < 313; i += candidate) isComposite[i] = candidate;
-			hash[primeCounter] = (Math.pow(candidate, 0.5) * maxWord) | 0;
-			k[primeCounter++] = (Math.pow(candidate, 1 / 3) * maxWord) | 0;
-		}
-	}
-	ascii += "\x80";
-	while (ascii.length % 64 - 56) ascii += "\x00";
-	for (let i = 0; i < ascii.length; i++) {
-		const j = ascii.charCodeAt(i);
-		words[i >> 2] |= j << ((3 - i) % 4) * 8;
-	}
-	words[words.length] = (asciiBitLength / maxWord) | 0;
-	words[words.length] = asciiBitLength;
-	for (let j = 0; j < words.length;) {
-		const w = words.slice(j, j += 16);
-		const oldHash = hash;
-		hash = hash.slice(0, 8);
-		for (let i = 0; i < 64; i++) {
-			const w15 = w[i - 15], w2 = w[i - 2];
-			const a = hash[0], e = hash[4];
-			const temp1 = hash[7] + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) + ((e & hash[5]) ^ (~e & hash[6])) + k[i] +
-				(w[i] = (i < 16) ? w[i] : (
-					w[i - 16] + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3)) +
-					w[i - 7] + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))
-				) | 0);
-			const temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
-			hash = [(temp1 + temp2) | 0].concat(hash);
-			hash[4] = (hash[4] + temp1) | 0;
-		}
-		for (let i = 0; i < 8; i++) hash[i] = (hash[i] + oldHash[i]) | 0;
-	}
-	for (let i = 0; i < 8; i++) {
-		for (let j = 3; j + 1; j--) {
-			const b = (hash[i] >> (j * 8)) & 255;
-			result += (b < 16 ? "0" : "") + b.toString(16);
-		}
-	}
-	return result;
-}
+const SESSION_KEY = "dash_session"; // { token, email } — nunca la contraseña
 
 /* Elementos de login */
 const loginView = document.getElementById("dash-view-login");
@@ -71,14 +20,6 @@ const dashApp = document.getElementById("dash-app");
 const loginForm = document.getElementById("dash-login-form");
 const loginError = document.getElementById("dash-login-error");
 const loginSubmitBtn = document.getElementById("dash-login-submit");
-const backendNote = document.getElementById("dash-backend-note");
-
-// El texto del HTML hablaba de un backend obligatorio; como ahora el login
-// funciona con hash local, se actualiza ese aviso desde aquí (sin tocar el
-// archivo dashboard.html) para no dejar información desactualizada.
-if (backendNote) {
-	backendNote.innerHTML = "<strong>Nota de seguridad:</strong> este acceso valida la contraseña mediante su huella SHA-256 en el propio navegador (sin backend). Es una protección básica, no una seguridad de nivel producción — cualquiera con el código fuente podría intentar evadirla. Para una autenticación real, monta el backend descrito en README.md.";
-}
 
 function getSession() {
 	try {
@@ -89,22 +30,42 @@ function getSession() {
 }
 
 function setSession(session) {
-	try {
-		sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-	} catch {
-		/* algunos navegadores restringen sessionStorage en ciertos contextos;
-		   la sesión simplemente no persistirá al recargar, pero el login
-		   igual funciona para la visita actual. */
-	}
+	try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch { /* ver nota abajo */ }
 }
 
 function clearSession() {
-	try { sessionStorage.removeItem(SESSION_KEY); } catch { /* ver nota arriba */ }
+	try { sessionStorage.removeItem(SESSION_KEY); } catch { /* algunos navegadores restringen sessionStorage en ciertos contextos */ }
 }
 
 function showError(message) {
 	loginError.textContent = message;
 	loginError.hidden = false;
+}
+
+/* Cliente HTTP centralizado para la API. Agrega automáticamente el token
+ * de sesión y maneja el caso de sesión vencida/该inválida en un solo lugar. */
+async function apiFetch(path, options = {}) {
+	const session = getSession();
+	const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+	if (session?.token) headers.Authorization = `Bearer ${session.token}`;
+
+	const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+
+	if (res.status === 401) {
+		clearSession();
+		showLogin();
+		showError("Tu sesión expiró. Inicia sesión de nuevo.");
+		throw new Error("Sesión expirada");
+	}
+
+	if (!res.ok) {
+		let message = `Error ${res.status}`;
+		try { message = (await res.json()).message || message; } catch { /* respuesta sin cuerpo JSON */ }
+		throw new Error(message);
+	}
+
+	if (res.status === 204) return null;
+	return res.json();
 }
 
 /* Envío del formulario de login */
@@ -114,22 +75,28 @@ loginForm.addEventListener("submit", async (e) => {
 	loginSubmitBtn.disabled = true;
 	loginSubmitBtn.textContent = "Verificando...";
 
-	const email = document.getElementById("dash-email").value.trim().toLowerCase();
+	const email = document.getElementById("dash-email").value.trim();
 	const password = document.getElementById("dash-password").value;
 
 	try {
-		const enteredHash = sha256(password);
+		const res = await fetch(`${API_BASE_URL}/auth/login`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ email, password }),
+		});
+		const data = await res.json().catch(() => ({}));
 
-		if (email === ADMIN_EMAIL.toLowerCase() && enteredHash === ADMIN_PASSWORD_HASH) {
-			setSession({ email, expiresAt: Date.now() + SESSION_DURATION_MS });
-			document.getElementById("dash-password").value = "";
-			enterDashboard(email);
-		} else {
-			showError("Correo o contraseña incorrectos.");
+		if (!res.ok) {
+			showError(data.message || "Correo o contraseña incorrectos.");
+			return;
 		}
+
+		setSession({ token: data.token, email: data.email });
+		document.getElementById("dash-password").value = "";
+		await enterDashboard(data.email);
 	} catch (err) {
-		// Cualquier error inesperado se muestra en vez de fallar en silencio.
-		showError("Ocurrió un error al validar el acceso. Intenta de nuevo.");
+		// Sin conexión con el backend, servidor caído, CORS mal configurado, etc.
+		showError("No se pudo conectar con el servidor. Verifica que el backend esté corriendo (ver README.md).");
 		console.error("Error en el login del panel:", err);
 	} finally {
 		loginSubmitBtn.disabled = false;
@@ -137,15 +104,28 @@ loginForm.addEventListener("submit", async (e) => {
 	}
 });
 
-/* Verificación de sesión al cargar la página. */
-function verifySessionAndEnter() {
+/* Verificación de sesión al cargar la página. No basta con que exista un
+ * token guardado: se revalida contra el servidor (GET /api/auth/verify),
+ * así que un token vencido o revocado se detecta de inmediato y manda de
+ * vuelta al login — esta es la "protección de ruta" real que pide el
+ * proyecto, no solo ocultar el contenido con CSS. */
+async function verifySessionAndEnter() {
 	const session = getSession();
-	if (!session || !session.email || !session.expiresAt || Date.now() > session.expiresAt) {
-		clearSession();
+	if (!session?.token) {
 		showLogin();
 		return;
 	}
-	enterDashboard(session.email);
+
+	try {
+		const res = await fetch(`${API_BASE_URL}/auth/verify`, {
+			headers: { Authorization: `Bearer ${session.token}` },
+		});
+		if (!res.ok) throw new Error("Sesión inválida");
+		await enterDashboard(session.email);
+	} catch {
+		clearSession();
+		showLogin();
+	}
 }
 
 function showLogin() {
@@ -153,10 +133,11 @@ function showLogin() {
 	dashApp.hidden = true;
 }
 
-function enterDashboard(email) {
+async function enterDashboard(email) {
 	loginView.hidden = true;
 	dashApp.hidden = false;
 	document.getElementById("dash-admin-email").textContent = email;
+	await loadAllData();
 	renderResumen();
 	renderProductsTable();
 	renderCategoriesTable();
@@ -191,33 +172,18 @@ document.getElementById("dash-mobile-toggle").addEventListener("click", () => {
 	document.querySelector(".dash-sidebar").classList.toggle("is-open");
 });
 
-/* DATOS COMPARTIDOS CON LA TIENDA PÚBLICA */
-function loadJSON(key, fallback) {
-	try {
-		const raw = localStorage.getItem(key);
-		return raw ? JSON.parse(raw) : fallback;
-	} catch {
-		return fallback;
-	}
+/* DATOS — se leen y escriben en el backend, nunca en localStorage. */
+let CONFIG = {};
+let CATEGORIES = [];
+let PRODUCTS = [];
+
+async function loadAllData() {
+	[CONFIG, CATEGORIES, PRODUCTS] = await Promise.all([
+		apiFetch("/site"),
+		apiFetch("/categories"),
+		apiFetch("/products"),
+	]);
 }
-
-let CONFIG = loadJSON("store_config", {});
-let CATEGORIES = loadJSON("store_categories", null);
-let PRODUCTS = loadJSON("store_products", null);
-
-// Si el administrador todavía no ha guardado nada, se parte de los mismos
-// valores por defecto que usa la tienda pública (definidos en script.js).
-// Como dashboard.html no carga script.js completo (para no duplicar la
-// lógica de la tienda), se copian aquí solo si localStorage está vacío.
-if (!CATEGORIES || !PRODUCTS || CATEGORIES.length === 0) {
-	console.warn("Aún no hay productos/categorías guardados por el panel. Abre index.html al menos una vez para inicializar los datos por defecto.");
-	CATEGORIES = CATEGORIES || [];
-	PRODUCTS = PRODUCTS || [];
-}
-
-function saveProducts() { localStorage.setItem("store_products", JSON.stringify(PRODUCTS)); }
-function saveCategories() { localStorage.setItem("store_categories", JSON.stringify(CATEGORIES)); }
-function saveConfig() { localStorage.setItem("store_config", JSON.stringify(CONFIG)); }
 
 function categoryCount(name) {
 	return PRODUCTS.filter(p => p.category === name).length;
@@ -229,11 +195,6 @@ function renderResumen() {
 	document.getElementById("stat-inactive-products").textContent = PRODUCTS.filter(p => p.active === false).length;
 	document.getElementById("stat-categories").textContent = CATEGORIES.length;
 	document.getElementById("stat-promo").textContent = PRODUCTS.filter(p => p.promo).length;
-
-	const hint = document.querySelector("#dash-panel-resumen .dash-hint");
-	if (CATEGORIES.length === 0 && PRODUCTS.length === 0) {
-		hint.innerHTML = `⚠️ Todavía no hay datos guardados en este navegador. Abre <a href="./index.html" target="_blank">la tienda pública</a> una vez (para que se inicialicen los valores por defecto) y vuelve a entrar aquí.`;
-	}
 }
 
 /* PRODUCTOS — tabla + modal crear/editar */
@@ -249,7 +210,7 @@ function renderProductsTable() {
 	const tbody = document.getElementById("dash-products-tbody");
 	tbody.innerHTML = PRODUCTS.map(p => `
 		<tr>
-			<td><img src="${p.image}" alt="${p.name}"></td>
+			<td><img src="../frontend/${p.image}" alt="${p.name}"></td>
 			<td>${p.name}</td>
 			<td>${p.category}</td>
 			<td>${CONFIG.moneda || "$"} ${Number(p.price).toLocaleString("es-CO")}</td>
@@ -284,11 +245,10 @@ document.getElementById("dash-new-product").addEventListener("click", () => open
 document.getElementById("dash-product-modal-close").addEventListener("click", () => { productModal.hidden = true; });
 document.getElementById("dash-product-cancel").addEventListener("click", () => { productModal.hidden = true; });
 
-productForm.addEventListener("submit", (e) => {
+productForm.addEventListener("submit", async (e) => {
 	e.preventDefault();
-	const id = document.getElementById("p-id").value || `p${Date.now()}`;
-	const data = {
-		id,
+	const id = document.getElementById("p-id").value;
+	const payload = {
 		name: document.getElementById("p-name").value.trim(),
 		category: document.getElementById("p-category").value,
 		description: document.getElementById("p-description").value.trim(),
@@ -300,25 +260,23 @@ productForm.addEventListener("submit", (e) => {
 		promo: document.getElementById("p-promo").checked,
 	};
 
-	const existingIndex = PRODUCTS.findIndex(p => p.id === id);
-	if (existingIndex >= 0) {
-		data.sales = PRODUCTS[existingIndex].sales || 0;
-		data.dateAdded = PRODUCTS[existingIndex].dateAdded;
-		PRODUCTS[existingIndex] = data;
-	} else {
-		data.sales = 0;
-		data.dateAdded = new Date().toISOString().slice(0, 10);
-		PRODUCTS.push(data);
+	try {
+		if (id) {
+			await apiFetch(`/products/${id}`, { method: "PUT", body: JSON.stringify(payload) });
+		} else {
+			await apiFetch("/products", { method: "POST", body: JSON.stringify(payload) });
+		}
+		PRODUCTS = await apiFetch("/products");
+		productModal.hidden = true;
+		renderProductsTable();
+		renderCategoriesTable();
+		renderResumen();
+	} catch (err) {
+		alert(err.message || "No se pudo guardar el producto.");
 	}
-
-	saveProducts();
-	productModal.hidden = true;
-	renderProductsTable();
-	renderCategoriesTable();
-	renderResumen();
 });
 
-document.getElementById("dash-products-tbody").addEventListener("click", (e) => {
+document.getElementById("dash-products-tbody").addEventListener("click", async (e) => {
 	const editId = e.target.dataset.editProduct;
 	const toggleId = e.target.dataset.toggleProduct;
 	const deleteId = e.target.dataset.deleteProduct;
@@ -327,19 +285,27 @@ document.getElementById("dash-products-tbody").addEventListener("click", (e) => 
 
 	if (toggleId) {
 		const p = PRODUCTS.find(prod => prod.id === toggleId);
-		p.active = p.active === false ? true : false;
-		saveProducts();
-		renderProductsTable();
-		renderResumen();
+		try {
+			await apiFetch(`/products/${toggleId}`, { method: "PATCH", body: JSON.stringify({ active: p.active === false }) });
+			PRODUCTS = await apiFetch("/products");
+			renderProductsTable();
+			renderResumen();
+		} catch (err) {
+			alert(err.message || "No se pudo actualizar el producto.");
+		}
 	}
 
 	if (deleteId) {
 		if (!confirm("¿Eliminar este producto? Esta acción no se puede deshacer.")) return;
-		PRODUCTS = PRODUCTS.filter(p => p.id !== deleteId);
-		saveProducts();
-		renderProductsTable();
-		renderCategoriesTable();
-		renderResumen();
+		try {
+			await apiFetch(`/products/${deleteId}`, { method: "DELETE" });
+			PRODUCTS = await apiFetch("/products");
+			renderProductsTable();
+			renderCategoriesTable();
+			renderResumen();
+		} catch (err) {
+			alert(err.message || "No se pudo eliminar el producto.");
+		}
 	}
 });
 
@@ -351,7 +317,7 @@ function renderCategoriesTable() {
 	const tbody = document.getElementById("dash-categories-tbody");
 	tbody.innerHTML = CATEGORIES.map(c => `
 		<tr>
-			<td>${c.image ? `<img src="${c.image}" alt="${c.name}">` : (c.emoji || "🎀")}</td>
+			<td>${c.image ? `<img src="../frontend/${c.image}" alt="${c.name}">` : (c.emoji || "🎀")}</td>
 			<td>${c.name}</td>
 			<td>${categoryCount(c.name)}</td>
 			<td class="dash-table-actions">
@@ -375,41 +341,49 @@ document.getElementById("dash-new-category").addEventListener("click", () => ope
 document.getElementById("dash-category-modal-close").addEventListener("click", () => { categoryModal.hidden = true; });
 document.getElementById("dash-category-cancel").addEventListener("click", () => { categoryModal.hidden = true; });
 
-categoryForm.addEventListener("submit", (e) => {
+categoryForm.addEventListener("submit", async (e) => {
 	e.preventDefault();
-	const id = document.getElementById("c-id").value || `cat${Date.now()}`;
-	const data = {
-		id,
+	const id = document.getElementById("c-id").value;
+	const payload = {
 		name: document.getElementById("c-name").value.trim(),
 		emoji: document.getElementById("c-emoji").value.trim() || "🎀",
 		image: document.getElementById("c-image").value.trim(),
 	};
 
-	const existingIndex = CATEGORIES.findIndex(c => c.id === id);
-	if (existingIndex >= 0) {
-		CATEGORIES[existingIndex] = data;
-	} else {
-		CATEGORIES.push(data);
+	try {
+		if (id) {
+			await apiFetch(`/categories/${id}`, { method: "PUT", body: JSON.stringify(payload) });
+		} else {
+			await apiFetch("/categories", { method: "POST", body: JSON.stringify(payload) });
+		}
+		[CATEGORIES, PRODUCTS] = await Promise.all([apiFetch("/categories"), apiFetch("/products")]);
+		categoryModal.hidden = true;
+		renderCategoriesTable();
+		renderProductsTable();
+		renderResumen();
+	} catch (err) {
+		alert(err.message || "No se pudo guardar la categoría.");
 	}
-
-	saveCategories();
-	categoryModal.hidden = true;
-	renderCategoriesTable();
-	renderResumen();
 });
 
-document.getElementById("dash-categories-tbody").addEventListener("click", (e) => {
+document.getElementById("dash-categories-tbody").addEventListener("click", async (e) => {
 	const editId = e.target.dataset.editCategory;
 	const deleteId = e.target.dataset.deleteCategory;
 
 	if (editId) openCategoryModal(CATEGORIES.find(c => c.id === editId));
 
 	if (deleteId) {
-		if (!confirm("¿Eliminar esta categoría? Los productos que la usan conservarán el nombre anterior.")) return;
-		CATEGORIES = CATEGORIES.filter(c => c.id !== deleteId);
-		saveCategories();
-		renderCategoriesTable();
-		renderResumen();
+		if (!confirm("¿Eliminar esta categoría?")) return;
+		try {
+			await apiFetch(`/categories/${deleteId}`, { method: "DELETE" });
+			CATEGORIES = await apiFetch("/categories");
+			renderCategoriesTable();
+			renderResumen();
+		} catch (err) {
+			// Ej: 409 porque hay productos usando esta categoría — el backend
+			// explica el motivo exacto, aquí solo se muestra tal cual.
+			alert(err.message || "No se pudo eliminar la categoría.");
+		}
 	}
 });
 
@@ -424,21 +398,26 @@ function fillStoreForm() {
 	document.getElementById("store-instagram").value = CONFIG.instagram || "";
 }
 
-document.getElementById("dash-store-form").addEventListener("submit", (e) => {
+document.getElementById("dash-store-form").addEventListener("submit", async (e) => {
 	e.preventDefault();
-	CONFIG.nombreEmpresa = document.getElementById("store-name").value.trim() || CONFIG.nombreEmpresa;
-	CONFIG.tagline = document.getElementById("store-tagline").value.trim();
-	CONFIG.email = document.getElementById("store-email").value.trim();
-	CONFIG.whatsappNumero = document.getElementById("store-whatsapp").value.trim().replace(/\D/g, "");
-	CONFIG.whatsappMensaje = document.getElementById("store-whatsapp-msg").value.trim();
-	CONFIG.tiktok = document.getElementById("store-tiktok").value.trim();
-	CONFIG.instagram = document.getElementById("store-instagram").value.trim();
+	const payload = {
+		nombreEmpresa: document.getElementById("store-name").value.trim(),
+		tagline: document.getElementById("store-tagline").value.trim(),
+		email: document.getElementById("store-email").value.trim(),
+		whatsappNumero: document.getElementById("store-whatsapp").value.trim(),
+		whatsappMensaje: document.getElementById("store-whatsapp-msg").value.trim(),
+		tiktok: document.getElementById("store-tiktok").value.trim(),
+		instagram: document.getElementById("store-instagram").value.trim(),
+	};
 
-	saveConfig();
-
-	const msg = document.getElementById("store-saved");
-	msg.hidden = false;
-	setTimeout(() => { msg.hidden = true; }, 2500);
+	try {
+		CONFIG = await apiFetch("/site", { method: "PUT", body: JSON.stringify(payload) });
+		const msg = document.getElementById("store-saved");
+		msg.hidden = false;
+		setTimeout(() => { msg.hidden = true; }, 2500);
+	} catch (err) {
+		alert(err.message || "No se pudo guardar la información de la tienda.");
+	}
 });
 
 /* INICIALIZACIÓN */
