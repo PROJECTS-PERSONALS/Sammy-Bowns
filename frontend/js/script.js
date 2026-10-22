@@ -169,7 +169,7 @@ function updateResultsHeader(products) {
 
 	const activeCat = CATEGORIES.find(c => c.name === state.activeCategory);
 	if (activeCat && activeCat.image && !searching) {
-		categoryBannerImg.src = activeCat.image;
+		categoryBannerImg.src = resolveImage(activeCat.image);
 		categoryBannerImg.alt = activeCat.name;
 		categoryBanner.hidden = false;
 	} else {
@@ -186,7 +186,7 @@ function buildProductCard(product) {
 	card.className = "card";
 	card.innerHTML = `
 		<div class="card__image-wrap">
-			<img src="${product.image}" alt="${product.name}" loading="lazy">
+			<img src="${resolveImage(product.image)}" alt="${product.name}" loading="lazy">
 			${product.promo ? `<span class="card__badge">Promoción</span>` : ""}
 			${product.featured ? `<span class="card__badge card__badge--featured">Destacado</span>` : ""}
 			<button class="card__fav ${isFav ? "is-active" : ""}" data-fav="${product.id}" aria-label="Favorito">
@@ -258,7 +258,7 @@ function renderCategoriesUI() {
 			} else {
 				el.innerHTML = `
 					<button class="category-item ${isActive ? "is-active" : ""}" data-category="${item.key}">
-						<span class="category-item__thumb">${item.image ? `<img src="${item.image}" alt="${item.name}">` : (item.emoji || "🎀")}</span>
+						<span class="category-item__thumb">${item.image ? `<img src="${resolveImage(item.image)}" alt="${item.name}">` : (item.emoji || "🎀")}</span>
 						<span class="category-item__name">${item.name}</span>
 						<span class="category-item__count">${item.count}</span>
 					</button>
@@ -450,7 +450,7 @@ function renderCart() {
 		const row = document.createElement("div");
 		row.className = "cart-item";
 		row.innerHTML = `
-			<img src="${product.image}" alt="${product.name}">
+			<img src="${resolveImage(product.image)}" alt="${product.name}">
 			<div class="cart-item__info">
 				<div class="cart-item__name">${product.name}</div>
 				<div class="cart-item__qty">

@@ -11,6 +11,10 @@
 	justify-content: center;
 }
 
+/* Sin esto, el display: flex de arriba le gana al atributo hidden y el
+ * login seguía visible encima del panel después de entrar. */
+.dash-login[hidden], .dash-app[hidden] { display: none; }
+
 .dash-login__card {
 	width: 100%;
 	max-width: 400px;
@@ -187,6 +191,18 @@
 .dash-form--wide { max-width: 640px; background: var(--color-surface); border: 1px solid var(--color-line); border-radius: var(--radius-md); padding: 22px; }
 
 .dash-form__row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+.dash-image-field { display: flex; flex-direction: column; gap: 8px; }
+
+.dash-upload input[type="file"] { padding: 7px; background: var(--color-rose-soft); cursor: pointer; }
+
+.dash-image-preview-wrap { display: flex; align-items: center; gap: 12px; min-height: 0; }
+
+.dash-image-preview { width: 72px; height: 72px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--color-line); }
+
+.dash-image-status { font-size: 0.78rem; color: var(--color-text-muted); }
+
+.dash-image-status--error { color: #c0392b; }
 
 .dash-form label { display: flex; flex-direction: column; gap: 5px; font-size: 0.8rem; color: var(--color-text-muted); }
 

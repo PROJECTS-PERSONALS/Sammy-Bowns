@@ -197,6 +197,74 @@ function renderResumen() {
 	document.getElementById("stat-promo").textContent = PRODUCTS.filter(p => p.promo).length;
 }
 
+/* IMÁGENES — subida desde el dashboard
+ * El archivo se envía al backend (POST /uploads) apenas se elige, y la
+ * ruta que devuelve ("uploads/...") queda en el campo de texto: es la que
+ * se guarda con el producto o la categoría. También se puede seguir
+ * escribiendo a mano una ruta "img/..." de las fotos que ya existen. */
+const UPLOAD_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const UPLOAD_MAX_BYTES = 5 * 1024 * 1024;
+
+function setImageStatus(prefix, message, isError = false) {
+	const status = document.getElementById(`${prefix}-image-status`);
+	status.textContent = message;
+	status.classList.toggle("dash-image-status--error", isError);
+}
+
+function updateImagePreview(prefix) {
+	const value = document.getElementById(`${prefix}-image`).value.trim();
+	const preview = document.getElementById(`${prefix}-image-preview`);
+	preview.hidden = !value;
+	if (value) preview.src = resolveImage(value, "../frontend/");
+}
+
+function setupImageUpload(prefix, form) {
+	const pathInput = document.getElementById(`${prefix}-image`);
+	const fileInput = document.getElementById(`${prefix}-image-file`);
+	const submitBtn = form.querySelector('button[type="submit"]');
+
+	pathInput.addEventListener("input", () => updateImagePreview(prefix));
+
+	fileInput.addEventListener("change", async () => {
+		const file = fileInput.files[0];
+		if (!file) return;
+		if (!UPLOAD_TYPES.includes(file.type)) {
+			setImageStatus(prefix, "Formato no permitido. Usa JPG, PNG, WEBP o GIF.", true);
+			fileInput.value = "";
+			return;
+		}
+		if (file.size > UPLOAD_MAX_BYTES) {
+			setImageStatus(prefix, "La imagen pesa más de 5 MB.", true);
+			fileInput.value = "";
+			return;
+		}
+
+		setImageStatus(prefix, "Subiendo imagen…");
+		submitBtn.disabled = true; // evita guardar antes de tener la ruta
+		try {
+			const { path } = await apiFetch("/uploads", {
+				method: "POST",
+				headers: { "Content-Type": file.type },
+				body: file,
+			});
+			pathInput.value = path;
+			updateImagePreview(prefix);
+			setImageStatus(prefix, "Imagen subida. Guarda para aplicar el cambio.");
+		} catch (err) {
+			setImageStatus(prefix, err.message || "No se pudo subir la imagen.", true);
+		} finally {
+			submitBtn.disabled = false;
+			fileInput.value = "";
+		}
+	});
+}
+
+function resetImageField(prefix) {
+	document.getElementById(`${prefix}-image-file`).value = "";
+	setImageStatus(prefix, "");
+	updateImagePreview(prefix);
+}
+
 /* PRODUCTOS — tabla + modal crear/editar */
 const productModal = document.getElementById("dash-modal-product");
 const productForm = document.getElementById("dash-product-form");
@@ -210,7 +278,7 @@ function renderProductsTable() {
 	const tbody = document.getElementById("dash-products-tbody");
 	tbody.innerHTML = PRODUCTS.map(p => `
 		<tr>
-			<td><img src="../frontend/${p.image}" alt="${p.name}"></td>
+			<td><img src="${resolveImage(p.image, "../frontend/")}" alt="${p.name}"></td>
 			<td>${p.name}</td>
 			<td>${p.category}</td>
 			<td>${CONFIG.moneda || "$"} ${Number(p.price).toLocaleString("es-CO")}</td>
@@ -238,9 +306,11 @@ function openProductModal(product) {
 	document.getElementById("p-active").checked = product ? product.active !== false : true;
 	document.getElementById("p-featured").checked = !!product?.featured;
 	document.getElementById("p-promo").checked = !!product?.promo;
+	resetImageField("p");
 	productModal.hidden = false;
 }
 
+setupImageUpload("p", productForm);
 document.getElementById("dash-new-product").addEventListener("click", () => openProductModal(null));
 document.getElementById("dash-product-modal-close").addEventListener("click", () => { productModal.hidden = true; });
 document.getElementById("dash-product-cancel").addEventListener("click", () => { productModal.hidden = true; });
@@ -317,7 +387,7 @@ function renderCategoriesTable() {
 	const tbody = document.getElementById("dash-categories-tbody");
 	tbody.innerHTML = CATEGORIES.map(c => `
 		<tr>
-			<td>${c.image ? `<img src="../frontend/${c.image}" alt="${c.name}">` : (c.emoji || "🎀")}</td>
+			<td>${c.image ? `<img src="${resolveImage(c.image, "../frontend/")}" alt="${c.name}">` : (c.emoji || "🎀")}</td>
 			<td>${c.name}</td>
 			<td>${categoryCount(c.name)}</td>
 			<td class="dash-table-actions">
@@ -334,9 +404,11 @@ function openCategoryModal(category) {
 	document.getElementById("c-name").value = category?.name || "";
 	document.getElementById("c-emoji").value = category?.emoji || "";
 	document.getElementById("c-image").value = category?.image || "";
+	resetImageField("c");
 	categoryModal.hidden = false;
 }
 
+setupImageUpload("c", categoryForm);
 document.getElementById("dash-new-category").addEventListener("click", () => openCategoryModal(null));
 document.getElementById("dash-category-modal-close").addEventListener("click", () => { categoryModal.hidden = true; });
 document.getElementById("dash-category-cancel").addEventListener("click", () => { categoryModal.hidden = true; });
