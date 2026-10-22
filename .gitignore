@@ -11,3 +11,6 @@ Thumbs.db
 .idea/
 # Respaldo comprimido antiguo del proyecto
 PROYECTO_FINAL_v2.zip
+
+# Imágenes subidas desde el dashboard (viven en el servidor)
+backend/uploads/

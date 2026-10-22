@@ -165,7 +165,14 @@
 						<label> Precio <input type="number" id="p-price" min="0" required></label>
 						<label> Precio anterior (opcional) <input type="number" id="p-oldprice" min="0"></label>
 					</div>
-					<label> Ruta de imagen (dentro de "img/") <input type="text" id="p-image" placeholder="img/categoria/archivo.jpeg"></label>
+					<div class="dash-image-field">
+						<label> Imagen <input type="text" id="p-image" placeholder="img/categoria/archivo.jpeg"></label>
+						<label class="dash-upload"> o sube una foto (JPG, PNG o WEBP, máx. 5 MB) <input type="file" id="p-image-file" accept="image/jpeg,image/png,image/webp,image/gif"></label>
+						<div class="dash-image-preview-wrap">
+							<img id="p-image-preview" class="dash-image-preview" alt="Vista previa" hidden>
+							<small id="p-image-status" class="dash-image-status" aria-live="polite"></small>
+						</div>
+					</div>
 					<div class="dash-form__row">
 						<label class="dash-checkbox"><input type="checkbox" id="p-active" checked> Producto activo </label>
 						<label class="dash-checkbox"><input type="checkbox" id="p-featured"> Destacado </label>
@@ -186,9 +193,14 @@
 				<form id="dash-category-form" class="dash-form">
 					<input type="hidden" id="c-id">
 					<label> Nombre <input type="text" id="c-name" required></label>
-					<div class="dash-form__row">
-						<label> Emoji / ícono <input type="text" id="c-emoji" maxlength="4" placeholder="🎀"></label>
-						<label> Ruta de imagen (opcional) <input type="text" id="c-image" placeholder="img/categoria/foto.jpeg"></label>
+					<label> Emoji / ícono <input type="text" id="c-emoji" maxlength="4" placeholder="🎀"></label>
+					<div class="dash-image-field">
+						<label> Imagen <input type="text" id="c-image" placeholder="img/categoria/foto.jpeg (opcional)"></label>
+						<label class="dash-upload"> o sube una foto (JPG, PNG o WEBP, máx. 5 MB) <input type="file" id="c-image-file" accept="image/jpeg,image/png,image/webp,image/gif"></label>
+						<div class="dash-image-preview-wrap">
+							<img id="c-image-preview" class="dash-image-preview" alt="Vista previa" hidden>
+							<small id="c-image-status" class="dash-image-status" aria-live="polite"></small>
+						</div>
 					</div>
 					<div class="modal__actions">
 						<button type="button" class="btn btn--ghost" id="dash-category-cancel"> Cancelar </button>
