@@ -6,12 +6,15 @@
  * con un nombre único y se devuelve la ruta "uploads/<archivo>", que es la
  * que se guarda en el producto o la categoría.
  *
- * Igual que los JSON de /data, esta carpeta vive en el disco del servidor:
- * en el hosting hay que usar un disco persistente para no perderla.
+ * Con MONGODB_URI (producción) la imagen se guarda en MongoDB, en la
+ * colección "images", porque el disco de Render gratis se borra en cada
+ * reinicio. Sin MONGODB_URI (tu PC) se guarda en backend/uploads/.
+ * En ambos casos la tienda la pide igual: GET /uploads/<archivo>.
  */
 const fs = require("fs/promises");
 const path = require("path");
 const crypto = require("crypto");
+const { useMongo, getDb } = require("../data/db");
 
 const UPLOADS_DIR = path.join(__dirname, "..", "uploads");
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -33,11 +36,37 @@ async function upload(req, res) {
 		return res.status(400).json({ message: "No se recibió ninguna imagen." });
 	}
 
-	await fs.mkdir(UPLOADS_DIR, { recursive: true });
 	const fileName = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}.${ext}`;
-	await fs.writeFile(path.join(UPLOADS_DIR, fileName), req.body);
+	if (useMongo()) {
+		const db = await getDb();
+		await db.collection("images").insertOne({
+			_id: fileName,
+			contentType: type,
+			data: req.body,
+			size: req.body.length,
+			createdAt: new Date(),
+		});
+	} else {
+		await fs.mkdir(UPLOADS_DIR, { recursive: true });
+		await fs.writeFile(path.join(UPLOADS_DIR, fileName), req.body);
+	}
 
 	res.status(201).json({ path: `uploads/${fileName}` });
 }
 
-module.exports = { upload, UPLOADS_DIR, ALLOWED_TYPES, MAX_BYTES };
+// GET /uploads/<archivo> en modo MongoDB (en modo archivos lo sirve
+// express.static desde server.js). Los nombres son únicos y nunca se
+// reescriben, así que el navegador puede guardarlas en caché sin miedo.
+async function serveFromDb(req, res, next) {
+	try {
+		const db = await getDb();
+		const image = await db.collection("images").findOne({ _id: req.params.name });
+		if (!image) return res.status(404).json({ message: "Imagen no encontrada." });
+		res.set("Cache-Control", "public, max-age=604800, immutable");
+		res.type(image.contentType).send(Buffer.from(image.data.buffer));
+	} catch (err) {
+		next(err);
+	}
+}
+
+module.exports = { upload, serveFromDb, UPLOADS_DIR, ALLOWED_TYPES, MAX_BYTES };

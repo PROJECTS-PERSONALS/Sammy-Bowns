@@ -1,13 +1,20 @@
 /* config.js — configuración centralizada del frontend.
  *
  * Un solo lugar para la URL del backend, en vez de repetirla por todo el
- * código. Cambia SOLO este valor cuando el backend quede desplegado en
- * producción (ver README.md, sección "Deploy del backend").
+ * código. Si la URL de Render cambia, actualiza PRODUCTION_API_URL (ver
+ * README.md, sección "Deploy del backend").
  *
  * Este mismo archivo (config.js) también existe en dashboard/js/config.js
  * — mantén ambos con la misma URL.
  */
-const API_BASE_URL = "http://localhost:4000/api";
+// Abierto en tu PC (Live Server o doble clic al archivo) usa el backend local; publicado
+// (GitHub Pages) usa el backend de Render.
+const LOCAL_API_URL = "http://localhost:4000/api";
+const PRODUCTION_API_URL = "https://sammy-bowns-api.onrender.com/api";
+
+const API_BASE_URL = ["localhost", "127.0.0.1", ""].includes(location.hostname)
+	? LOCAL_API_URL
+	: PRODUCTION_API_URL;
 
 /* Las imágenes subidas desde el dashboard viven en el backend
  * ("uploads/..."); las demás son archivos del frontend ("img/...").

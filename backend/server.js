@@ -14,7 +14,8 @@ const productsRoutes = require("./routes/products.routes");
 const categoriesRoutes = require("./routes/categories.routes");
 const siteRoutes = require("./routes/site.routes");
 const uploadsRoutes = require("./routes/uploads.routes");
-const { UPLOADS_DIR } = require("./controllers/uploads.controller");
+const { UPLOADS_DIR, serveFromDb } = require("./controllers/uploads.controller");
+const { useMongo } = require("./data/db");
 const { eventsHandler } = require("./realtime");
 
 // Falla rápido y con un mensaje claro si falta configuración esencial —
@@ -52,7 +53,8 @@ app.use("/api/uploads", uploadsRoutes);
 app.get("/api/events", eventsHandler); // público: actualizaciones en vivo para la tienda
 
 // Imágenes subidas desde el dashboard (públicas, como las de frontend/img).
-app.use("/uploads", express.static(UPLOADS_DIR, { maxAge: "7d" }));
+if (useMongo()) app.get("/uploads/:name", serveFromDb);
+else app.use("/uploads", express.static(UPLOADS_DIR, { maxAge: "7d" }));
 
 app.use(notFound);
 app.use(errorHandler);
