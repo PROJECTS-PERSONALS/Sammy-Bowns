@@ -19,7 +19,9 @@ const fs = require("fs/promises");
 const path = require("path");
 const { notifyChange } = require("../realtime");
 
-const DATA_DIR = __dirname;
+// DATA_DIR solo se usa en las pruebas automáticas (carpeta temporal); en uso
+// normal los JSON de semilla viven junto a este archivo.
+const DATA_DIR = process.env.DATA_DIR || __dirname;
 const queues = new Map(); // una promesa "cola" por archivo
 
 let dbPromise = null;
@@ -66,24 +68,40 @@ async function readJSON(fileName, fallback) {
 	return doc ? doc.data : readFileJSON(fileName, fallback);
 }
 
+async function persist(fileName, data) {
+	if (useMongo()) {
+		const db = await getDb();
+		await db.collection("docs").replaceOne(
+			{ _id: fileName },
+			{ _id: fileName, data, updatedAt: new Date() },
+			{ upsert: true },
+		);
+	} else {
+		const filePath = path.join(DATA_DIR, fileName);
+		const tmpPath = `${filePath}.tmp`;
+		await fs.writeFile(tmpPath, JSON.stringify(data, null, 2), "utf-8");
+		await fs.rename(tmpPath, filePath);
+	}
+	// Avisa en vivo a las tiendas abiertas (ver realtime.js).
+	notifyChange(fileName.replace(/\.json$/, ""));
+}
+
 async function writeJSON(fileName, data) {
+	return withQueue(fileName, () => persist(fileName, data));
+}
+
+/* Leer -> modificar -> guardar como UNA sola operación en la cola del
+ * archivo. Con readJSON + writeJSON por separado, dos peticiones simultáneas
+ * leían la misma versión y la última en guardar borraba el cambio de la otra
+ * (comprobado: 3 de 10 guardados simultáneos sobrevivían). `mutate` recibe
+ * los datos actuales y devuelve los nuevos; si lanza un error, no se guarda
+ * nada. Protege dentro de un único proceso (Render gratis = 1 instancia). */
+async function mutateJSON(fileName, fallback, mutate) {
 	return withQueue(fileName, async () => {
-		if (useMongo()) {
-			const db = await getDb();
-			await db.collection("docs").replaceOne(
-				{ _id: fileName },
-				{ _id: fileName, data, updatedAt: new Date() },
-				{ upsert: true },
-			);
-		} else {
-			const filePath = path.join(DATA_DIR, fileName);
-			const tmpPath = `${filePath}.tmp`;
-			await fs.writeFile(tmpPath, JSON.stringify(data, null, 2), "utf-8");
-			await fs.rename(tmpPath, filePath);
-		}
-		// Avisa en vivo a las tiendas abiertas (ver realtime.js).
-		notifyChange(fileName.replace(/\.json$/, ""));
+		const next = await mutate(await readJSON(fileName, fallback));
+		await persist(fileName, next);
+		return next;
 	});
 }
 
-module.exports = { readJSON, writeJSON, useMongo, getDb };
+module.exports = { readJSON, writeJSON, mutateJSON, useMongo, getDb };

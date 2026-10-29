@@ -6,9 +6,21 @@ function notFound(req, res) {
 
 function errorHandler(err, req, res, next) {
 	console.error(err); // el detalle completo solo queda en el log del servidor
+	if (res.headersSent) return next(err);
 	const status = err.status || 500;
 	const message = status === 500 ? "Error interno del servidor." : err.message;
 	res.status(status).json({ message });
 }
 
-module.exports = { notFound, errorHandler };
+/* Express 4 no captura los errores de funciones async: una promesa rechazada
+ * (Mongo caído, dato inesperado...) tumbaba todo el proceso. Este envoltorio
+ * los manda al errorHandler en vez de dejarlos escapar. */
+const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+function httpError(status, message) {
+	const err = new Error(message);
+	err.status = status;
+	return err;
+}
+
+module.exports = { notFound, errorHandler, asyncHandler, httpError };
