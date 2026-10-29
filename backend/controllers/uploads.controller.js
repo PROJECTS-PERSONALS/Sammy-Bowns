@@ -16,7 +16,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { useMongo, getDb } = require("../data/db");
 
-const UPLOADS_DIR = path.join(__dirname, "..", "uploads");
+const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(__dirname, "..", "uploads");
 const MAX_BYTES = 5 * 1024 * 1024;
 
 // Solo formatos de imagen comunes; la extensión sale del tipo, nunca del
@@ -28,12 +28,25 @@ const ALLOWED_TYPES = {
 	"image/gif": "gif",
 };
 
+// Firmas ("magic bytes") de cada formato: comprueba que el contenido sea de
+// verdad una imagen y no solo que el encabezado Content-Type lo diga.
+const SIGNATURES = {
+	"image/jpeg": (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
+	"image/png": (b) => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
+	"image/gif": (b) => ["GIF87a", "GIF89a"].includes(b.subarray(0, 6).toString("latin1")),
+	"image/webp": (b) => b.subarray(0, 4).toString("latin1") === "RIFF" && b.subarray(8, 12).toString("latin1") === "WEBP",
+};
+
 async function upload(req, res) {
 	const type = (req.headers["content-type"] || "").split(";")[0].trim().toLowerCase();
 	const ext = ALLOWED_TYPES[type];
 	if (!ext) return res.status(400).json({ message: "Formato no permitido. Usa JPG, PNG, WEBP o GIF." });
 	if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
 		return res.status(400).json({ message: "No se recibió ninguna imagen." });
+	}
+
+	if (!SIGNATURES[type](req.body)) {
+		return res.status(400).json({ message: "El archivo no es una imagen válida." });
 	}
 
 	const fileName = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}.${ext}`;
@@ -63,6 +76,7 @@ async function serveFromDb(req, res, next) {
 		const image = await db.collection("images").findOne({ _id: req.params.name });
 		if (!image) return res.status(404).json({ message: "Imagen no encontrada." });
 		res.set("Cache-Control", "public, max-age=604800, immutable");
+		res.set("X-Content-Type-Options", "nosniff");
 		res.type(image.contentType).send(Buffer.from(image.data.buffer));
 	} catch (err) {
 		next(err);

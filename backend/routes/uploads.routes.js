@@ -1,6 +1,7 @@
 const express = require("express");
 const ctrl = require("../controllers/uploads.controller");
 const { requireAuth } = require("../middleware/auth.middleware");
+const { asyncHandler } = require("../middleware/error.middleware");
 
 const router = express.Router();
 
@@ -16,6 +17,6 @@ function parseImage(req, res, next) {
 	});
 }
 
-router.post("/", requireAuth, parseImage, ctrl.upload); // admin
+router.post("/", requireAuth, parseImage, asyncHandler(ctrl.upload)); // admin
 
 module.exports = router;

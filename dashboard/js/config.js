@@ -28,3 +28,10 @@ function resolveImage(imagePath, localPrefix = "") {
 	if (imagePath.startsWith("uploads/")) return `${API_ORIGIN}/${imagePath}`;
 	return `${localPrefix}${imagePath}`;
 }
+
+/* Escapa texto antes de meterlo en un innerHTML: nombres, descripciones y
+ * categorías las escribe el administrador y no deben interpretarse como HTML
+ * (evita XSS almacenado). Para textContent / .value no hace falta. */
+function escapeHTML(value) {
+	return String(value ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+}

@@ -196,24 +196,24 @@ function buildProductCard(product) {
 	card.className = "card";
 	card.innerHTML = `
 		<div class="card__image-wrap">
-			<img src="${resolveImage(product.image)}" alt="${product.name}" loading="lazy">
+			<img src="${escapeHTML(resolveImage(product.image))}" alt="${escapeHTML(product.name)}" loading="lazy">
 			${product.promo ? `<span class="card__badge">Promoción</span>` : ""}
 			${product.featured ? `<span class="card__badge card__badge--featured">Destacado</span>` : ""}
-			<button class="card__fav ${isFav ? "is-active" : ""}" data-fav="${product.id}" aria-label="Favorito">
+			<button class="card__fav ${isFav ? "is-active" : ""}" data-fav="${escapeHTML(product.id)}" aria-label="Favorito">
 				<svg viewBox="0 0 24 24" fill="${isFav ? "currentColor" : "none"}" stroke="currentColor" stroke-width="1.6">
 					<path d="M12 21s-7.5-4.7-10-9.1C.5 8.4 2.3 5 5.8 5c2 0 3.4 1.1 4.2 2.3C10.8 6.1 12.2 5 14.2 5c3.5 0 5.3 3.4 3.8 6.9C19.5 16.3 12 21 12 21z"/>
 				</svg>
 			</button>
 		</div>
 		<div class="card__body">
-			<span class="card__category">${product.category}</span>
-			<h3 class="card__name">${product.name}</h3>
-			${product.description ? `<p class="card__description">${product.description}</p>` : ""}
+			<span class="card__category">${escapeHTML(product.category)}</span>
+			<h3 class="card__name">${escapeHTML(product.name)}</h3>
+			${product.description ? `<p class="card__description">${escapeHTML(product.description)}</p>` : ""}
 			<div class="card__price-row">
 				<span class="card__price">${formatPrice(product.price)}</span>
 				${product.oldPrice ? `<span class="card__price--old">${formatPrice(product.oldPrice)}</span>` : ""}
 			</div>
-			<button class="card__add" data-add="${product.id}">Añadir a la bolsa</button>
+			<button class="card__add" data-add="${escapeHTML(product.id)}">Añadir a la bolsa</button>
 		</div>
 	`;
 	return card;
@@ -264,12 +264,12 @@ function renderCategoriesUI() {
 				el.className = isActive ? "is-active" : "";
 				el.dataset.category = item.key;
 				el.dataset.closeDrawer = "";
-				el.innerHTML = `<span>${item.emoji || "🎀"}</span><span>${item.name}</span>`;
+				el.innerHTML = `<span>${escapeHTML(item.emoji || "🎀")}</span><span>${escapeHTML(item.name)}</span>`;
 			} else {
 				el.innerHTML = `
-					<button class="category-item ${isActive ? "is-active" : ""}" data-category="${item.key}">
-						<span class="category-item__thumb">${item.image ? `<img src="${resolveImage(item.image)}" alt="${item.name}">` : (item.emoji || "🎀")}</span>
-						<span class="category-item__name">${item.name}</span>
+					<button class="category-item ${isActive ? "is-active" : ""}" data-category="${escapeHTML(item.key)}">
+						<span class="category-item__thumb">${item.image ? `<img src="${escapeHTML(resolveImage(item.image))}" alt="${escapeHTML(item.name)}">` : escapeHTML(item.emoji || "🎀")}</span>
+						<span class="category-item__name">${escapeHTML(item.name)}</span>
 						<span class="category-item__count">${item.count}</span>
 					</button>
 				`;
@@ -460,18 +460,18 @@ function renderCart() {
 		const row = document.createElement("div");
 		row.className = "cart-item";
 		row.innerHTML = `
-			<img src="${resolveImage(product.image)}" alt="${product.name}">
+			<img src="${escapeHTML(resolveImage(product.image))}" alt="${escapeHTML(product.name)}">
 			<div class="cart-item__info">
-				<div class="cart-item__name">${product.name}</div>
+				<div class="cart-item__name">${escapeHTML(product.name)}</div>
 				<div class="cart-item__qty">
-					<button data-qty="down" data-id="${item.id}">−</button>
+					<button data-qty="down" data-id="${escapeHTML(item.id)}">−</button>
 					<span>${item.qty}</span>
-					<button data-qty="up" data-id="${item.id}">+</button>
+					<button data-qty="up" data-id="${escapeHTML(item.id)}">+</button>
 				</div>
 			</div>
 			<div>
 				<div class="cart-item__price">${formatPrice(product.price * item.qty)}</div>
-				<button class="cart-item__remove" data-remove="${item.id}">Eliminar</button>
+				<button class="cart-item__remove" data-remove="${escapeHTML(item.id)}">Eliminar</button>
 			</div>
 		`;
 		wrap.appendChild(row);
@@ -523,25 +523,25 @@ grid.addEventListener("click", (e) => {
 	}
 });
 
-/* Finalizar compra por WhatsApp: arma el mensaje con el resumen del pedido */
+/* Finalizar compra por WhatsApp: arma el mensaje con el resumen del pedido.
+ * El texto completo pasa por encodeURIComponent: antes, nombres con "+", "&" o
+ * "#" (p. ej. "Combo Maxi + Par") llegaban cortados o con espacios de más. */
 function goToWhatsappCheckout() {
-	if (state.cart.length === 0) return;
+	// Solo productos que todavía existen y se muestran en la tienda.
+	const items = state.cart
+		.map(item => ({ item, product: PRODUCTS.find(p => p.id === item.id) }))
+		.filter(({ product }) => product && isProductVisible(product));
+	if (items.length === 0) return;
 
-	const lines = state.cart.map(item => {
-		const product = PRODUCTS.find(p => p.id === item.id);
-		return `- ${item.qty}x ${product.name} — ${formatPrice(product.price * item.qty)}`;
-	});
-	const totalProductos = state.cart.reduce((sum, i) => sum + i.qty, 0);
-	const total = state.cart.reduce((sum, item) => {
-		const product = PRODUCTS.find(p => p.id === item.id);
-		return sum + product.price * item.qty;
-	}, 0);
+	const lines = items.map(({ item, product }) => `- ${item.qty}x ${product.name} — ${formatPrice(product.price * item.qty)}`);
+	const totalProductos = items.reduce((sum, { item }) => sum + item.qty, 0);
+	const total = items.reduce((sum, { item, product }) => sum + product.price * item.qty, 0);
 
 	const message =
-		`Hola, ${CONFIG.nombreEmpresa}.%0A%0AQuiero realizar el siguiente pedido:%0A%0A${lines.join("%0A")}` +
-		`%0A%0ATotal de productos: ${totalProductos}%0ATotal: ${formatPrice(total)}%0A%0AQuedo atento/a para continuar con la compra.`;
+		`Hola, ${CONFIG.nombreEmpresa}.\n\nQuiero realizar el siguiente pedido:\n\n${lines.join("\n")}` +
+		`\n\nTotal de productos: ${totalProductos}\nTotal: ${formatPrice(total)}\n\nQuedo atento/a para continuar con la compra.`;
 
-	window.open(`https://wa.me/${CONFIG.whatsappNumero}?text=${message}`, "_blank");
+	window.open(`https://wa.me/${CONFIG.whatsappNumero}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
 }
 
 document.getElementById("cart-checkout").addEventListener("click", goToWhatsappCheckout);
@@ -552,6 +552,11 @@ function hideModal(modal) { modal.hidden = true; }
 
 [modalCart].forEach(modal => {
 	modal.addEventListener("click", (e) => { if (e.target === modal) hideModal(modal); });
+});
+document.addEventListener("keydown", (e) => {
+	if (e.key !== "Escape") return;
+	hideModal(modalCart);
+	closeNavDrawer();
 });
 
 /* NAVEGACIÓN ENTRE VISTAS PÚBLICAS (Tienda / Sobre) */
@@ -608,22 +613,48 @@ function applyStoreInfoToPage() {
 	document.getElementById("footer-copyright").textContent = `© ${new Date().getFullYear()} ${CONFIG.nombreEmpresa}. Todos los derechos reservados.`;
 }
 
+/* Quita del carrito lo que ya no existe o se ocultó (producto borrado,
+ * desactivado o de una categoría inactiva): si no, el total lo contaba. */
+function pruneCart() {
+	state.cart = state.cart.filter(item => {
+		const product = PRODUCTS.find(p => p.id === item.id);
+		return product && isProductVisible(product);
+	});
+	persistCart();
+}
+
+function renderStore() {
+	applyStoreInfoToPage();
+	renderCategoriesUI();
+	renderProducts();
+	updateCartCount();
+}
+
 /* INICIALIZACIÓN */
 async function init() {
+	// Con datos en caché (visita anterior) se pinta al instante; mientras tanto
+	// se consulta la API. Sin caché, se avisa: el plan gratis de Render tarda
+	// hasta ~1 minuto en despertar tras un rato sin visitas.
+	if (PRODUCTS.length > 0) {
+		renderStore();
+	} else {
+		emptyState.hidden = false;
+		emptyState.textContent = "Cargando productos… la primera visita puede tardar hasta un minuto.";
+	}
+
 	const ok = await loadStoreData();
+	if (ok) pruneCart();
+
+	renderStore();
 
 	if (!ok && PRODUCTS.length === 0) {
 		// Ni la API respondió ni había nada en caché (primera visita sin backend disponible).
+		// Va después de renderStore() porque renderProducts() reescribe este texto.
 		emptyState.hidden = false;
 		emptyState.textContent = "No se pudo conectar con el servidor. Intenta recargar la página en unos minutos.";
 	} else if (!ok) {
 		console.warn("Mostrando la última información guardada en este navegador: el servidor no respondió.");
 	}
-
-	applyStoreInfoToPage();
-	renderCategoriesUI();
-	renderProducts();
-	updateCartCount();
 }
 
 /* TIEMPO REAL — el backend avisa por /api/events (Server-Sent Events) cada
@@ -638,10 +669,8 @@ async function refreshStore() {
 	if (!["todos", "promo"].includes(state.activeCategory) && !isCategoryActive(state.activeCategory)) {
 		state.activeCategory = "todos";
 	}
-	applyStoreInfoToPage();
-	renderCategoriesUI();
-	renderProducts();
-	updateCartCount();
+	pruneCart();
+	renderStore();
 	if (!modalCart.hidden) renderCart();
 }
 

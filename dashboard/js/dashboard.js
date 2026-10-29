@@ -271,23 +271,23 @@ const productForm = document.getElementById("dash-product-form");
 
 function fillCategorySelect() {
 	const select = document.getElementById("p-category");
-	select.innerHTML = CATEGORIES.map(c => `<option value="${c.name}">${c.name}</option>`).join("");
+	select.innerHTML = CATEGORIES.map(c => `<option value="${escapeHTML(c.name)}">${escapeHTML(c.name)}</option>`).join("");
 }
 
 function renderProductsTable() {
 	const tbody = document.getElementById("dash-products-tbody");
 	tbody.innerHTML = PRODUCTS.map(p => `
 		<tr>
-			<td><img src="${resolveImage(p.image, "../frontend/")}" alt="${p.name}"></td>
-			<td>${p.name}</td>
-			<td>${p.category}${CATEGORIES.some(c => c.name === p.category && c.active === false) ? ' <small class="dash-muted">(categoría inactiva)</small>' : ""}</td>
+			<td><img src="${escapeHTML(resolveImage(p.image, "../frontend/"))}" alt="${escapeHTML(p.name)}"></td>
+			<td>${escapeHTML(p.name)}</td>
+			<td>${escapeHTML(p.category)}${CATEGORIES.some(c => c.name === p.category && c.active === false) ? ' <small class="dash-muted">(categoría inactiva)</small>' : ""}</td>
 			<td>${CONFIG.moneda || "$"} ${Number(p.price).toLocaleString("es-CO")}</td>
 			<td><span class="dash-badge ${p.active !== false ? "dash-badge--active" : "dash-badge--inactive"}">${p.active !== false ? "Activo" : "Inactivo"}</span></td>
 			<td>${p.featured ? '<span class="dash-badge dash-badge--featured">Destacado</span>' : "—"}</td>
 			<td class="dash-table-actions">
-				<button data-edit-product="${p.id}">Editar</button>
-				<button data-toggle-product="${p.id}">${p.active !== false ? "Desactivar" : "Activar"}</button>
-				<button data-delete-product="${p.id}">Eliminar</button>
+				<button data-edit-product="${escapeHTML(p.id)}">Editar</button>
+				<button data-toggle-product="${escapeHTML(p.id)}">${p.active !== false ? "Desactivar" : "Activar"}</button>
+				<button data-delete-product="${escapeHTML(p.id)}">Eliminar</button>
 			</td>
 		</tr>
 	`).join("");
@@ -387,14 +387,14 @@ function renderCategoriesTable() {
 	const tbody = document.getElementById("dash-categories-tbody");
 	tbody.innerHTML = CATEGORIES.map(c => `
 		<tr>
-			<td>${c.image ? `<img src="${resolveImage(c.image, "../frontend/")}" alt="${c.name}">` : (c.emoji || "🎀")}</td>
-			<td>${c.name}</td>
+			<td>${c.image ? `<img src="${escapeHTML(resolveImage(c.image, "../frontend/"))}" alt="${escapeHTML(c.name)}">` : escapeHTML(c.emoji || "🎀")}</td>
+			<td>${escapeHTML(c.name)}</td>
 			<td>${categoryCount(c.name)}</td>
 			<td><span class="dash-badge ${c.active !== false ? "dash-badge--active" : "dash-badge--inactive"}">${c.active !== false ? "Activa" : "Inactiva"}</span></td>
 			<td class="dash-table-actions">
-				<button data-edit-category="${c.id}">Editar</button>
-				<button data-toggle-category="${c.id}">${c.active !== false ? "Desactivar" : "Activar"}</button>
-				<button data-delete-category="${c.id}">Eliminar</button>
+				<button data-edit-category="${escapeHTML(c.id)}">Editar</button>
+				<button data-toggle-category="${escapeHTML(c.id)}">${c.active !== false ? "Desactivar" : "Activar"}</button>
+				<button data-delete-category="${escapeHTML(c.id)}">Eliminar</button>
 			</td>
 		</tr>
 	`).join("");
@@ -508,6 +508,10 @@ document.getElementById("dash-store-form").addEventListener("submit", async (e) 
 	} catch (err) {
 		alert(err.message || "No se pudo guardar la información de la tienda.");
 	}
+});
+
+document.addEventListener("keydown", (e) => {
+	if (e.key === "Escape") { productModal.hidden = true; categoryModal.hidden = true; }
 });
 
 /* INICIALIZACIÓN */

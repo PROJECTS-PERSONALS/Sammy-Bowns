@@ -12,12 +12,15 @@ const jwt = require("jsonwebtoken");
 async function login(req, res) {
 	const { email, password } = req.body || {};
 
-	if (!email || !password) {
+	// Deben ser texto: un número, lista u objeto en el JSON antes tumbaba el servidor.
+	if (typeof email !== "string" || typeof password !== "string" || !email || !password) {
 		return res.status(400).json({ message: "Correo y contraseña son obligatorios." });
 	}
 
+	// bcrypt.compare se ejecuta siempre (aunque el correo no coincida) para que el
+	// tiempo de respuesta no revele si el correo del administrador es el correcto.
+	const validPassword = await bcrypt.compare(password, process.env.ADMIN_PASSWORD_HASH || "");
 	const validEmail = email.trim().toLowerCase() === (process.env.ADMIN_EMAIL || "").toLowerCase();
-	const validPassword = validEmail && await bcrypt.compare(password, process.env.ADMIN_PASSWORD_HASH || "");
 
 	if (!validEmail || !validPassword) {
 		// Mensaje genérico a propósito: no revela cuál de los dos campos falló.
