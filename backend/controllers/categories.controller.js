@@ -14,6 +14,7 @@ function validateCategory(body, { partial = false } = {}) {
 	}
 	if (body.emoji !== undefined) c.emoji = String(body.emoji).trim() || "🎀";
 	if (body.image !== undefined) c.image = String(body.image).trim();
+	if (body.active !== undefined) c.active = Boolean(body.active);
 
 	return { errors, data: c };
 }
@@ -27,7 +28,7 @@ async function create(req, res) {
 	if (errors.length) return res.status(400).json({ message: errors.join(" ") });
 
 	const categories = await readJSON(CATEGORIES_FILE, []);
-	const category = { id: `cat${Date.now()}`, emoji: "🎀", image: "", ...data };
+	const category = { id: `cat${Date.now()}`, emoji: "🎀", image: "", active: true, ...data };
 	categories.push(category);
 	await writeJSON(CATEGORIES_FILE, categories);
 	res.status(201).json(category);

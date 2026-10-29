@@ -280,7 +280,7 @@ function renderProductsTable() {
 		<tr>
 			<td><img src="${resolveImage(p.image, "../frontend/")}" alt="${p.name}"></td>
 			<td>${p.name}</td>
-			<td>${p.category}</td>
+			<td>${p.category}${CATEGORIES.some(c => c.name === p.category && c.active === false) ? ' <small class="dash-muted">(categoría inactiva)</small>' : ""}</td>
 			<td>${CONFIG.moneda || "$"} ${Number(p.price).toLocaleString("es-CO")}</td>
 			<td><span class="dash-badge ${p.active !== false ? "dash-badge--active" : "dash-badge--inactive"}">${p.active !== false ? "Activo" : "Inactivo"}</span></td>
 			<td>${p.featured ? '<span class="dash-badge dash-badge--featured">Destacado</span>' : "—"}</td>
@@ -390,8 +390,10 @@ function renderCategoriesTable() {
 			<td>${c.image ? `<img src="${resolveImage(c.image, "../frontend/")}" alt="${c.name}">` : (c.emoji || "🎀")}</td>
 			<td>${c.name}</td>
 			<td>${categoryCount(c.name)}</td>
+			<td><span class="dash-badge ${c.active !== false ? "dash-badge--active" : "dash-badge--inactive"}">${c.active !== false ? "Activa" : "Inactiva"}</span></td>
 			<td class="dash-table-actions">
 				<button data-edit-category="${c.id}">Editar</button>
+				<button data-toggle-category="${c.id}">${c.active !== false ? "Desactivar" : "Activar"}</button>
 				<button data-delete-category="${c.id}">Eliminar</button>
 			</td>
 		</tr>
@@ -440,9 +442,25 @@ categoryForm.addEventListener("submit", async (e) => {
 
 document.getElementById("dash-categories-tbody").addEventListener("click", async (e) => {
 	const editId = e.target.dataset.editCategory;
+	const toggleId = e.target.dataset.toggleCategory;
 	const deleteId = e.target.dataset.deleteCategory;
 
 	if (editId) openCategoryModal(CATEGORIES.find(c => c.id === editId));
+
+	// Desactivar oculta la categoría y sus productos en la tienda, sin borrar
+	// nada; Activar los vuelve a mostrar tal como estaban.
+	if (toggleId) {
+		const c = CATEGORIES.find(cat => cat.id === toggleId);
+		try {
+			await apiFetch(`/categories/${toggleId}`, { method: "PATCH", body: JSON.stringify({ active: c.active === false }) });
+			CATEGORIES = await apiFetch("/categories");
+			renderCategoriesTable();
+			renderProductsTable();
+			renderResumen();
+		} catch (err) {
+			alert(err.message || "No se pudo actualizar la categoría.");
+		}
+	}
 
 	if (deleteId) {
 		if (!confirm("¿Eliminar esta categoría?")) return;

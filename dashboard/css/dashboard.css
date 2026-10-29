@@ -243,3 +243,4 @@
 	.dash-header { padding: 14px 16px; }
 	.dash-panel { padding: 18px 16px 50px; }
 }
+.dash-muted { font-size: 0.72rem; color: var(--color-text-muted); }
