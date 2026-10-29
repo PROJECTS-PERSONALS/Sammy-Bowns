@@ -103,9 +103,19 @@ function showView(view) {
 	window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+/* VISIBILIDAD — una categoría desactivada en el dashboard desaparece de la
+ * tienda junto con sus productos, sin borrar nada: al reactivarla vuelven. */
+function isCategoryActive(categoryName) {
+	return !CATEGORIES.some(c => c.name === categoryName && c.active === false);
+}
+
+function isProductVisible(product) {
+	return product.active !== false && isCategoryActive(product.category);
+}
+
 /* BÚSQUEDA, CATEGORÍAS Y ORDEN — RENDER DE PRODUCTOS */
 function getFilteredProducts() {
-	let list = PRODUCTS.filter(p => p.active !== false);
+	let list = PRODUCTS.filter(isProductVisible);
 
 	if (state.search.trim() !== "") {
 		const q = state.search.trim().toLowerCase();
@@ -230,17 +240,17 @@ function renderProducts() {
 
 /* CATEGORÍAS (sidebar desktop + menú hamburguesa móvil) */
 function categoryCount(categoryName) {
-	return PRODUCTS.filter(p => p.active !== false && p.category === categoryName).length;
+	return PRODUCTS.filter(p => isProductVisible(p) && p.category === categoryName).length;
 }
 
 function renderCategoriesUI() {
-	const totalActive = PRODUCTS.filter(p => p.active !== false).length;
-	const totalPromo = PRODUCTS.filter(p => p.active !== false && p.promo).length;
+	const totalActive = PRODUCTS.filter(isProductVisible).length;
+	const totalPromo = PRODUCTS.filter(p => isProductVisible(p) && p.promo).length;
 
 	const items = [
 		{ key: "todos", name: "Todos los productos", emoji: "🛍️", count: totalActive },
 		{ key: "promo", name: "Solo promoción", emoji: "🏷️", count: totalPromo },
-		...CATEGORIES.map(c => ({ key: c.name, name: c.name, emoji: c.emoji, image: c.image, count: categoryCount(c.name) })),
+		...CATEGORIES.filter(c => c.active !== false).map(c => ({ key: c.name, name: c.name, emoji: c.emoji, image: c.image, count: categoryCount(c.name) })),
 	];
 
 	const renderList = (target, isDrawer) => {
@@ -624,6 +634,10 @@ async function init() {
 async function refreshStore() {
 	const ok = await loadStoreData();
 	if (!ok) return;
+	// Si desactivaron la categoría que el cliente estaba viendo, vuelve a "Todos".
+	if (!["todos", "promo"].includes(state.activeCategory) && !isCategoryActive(state.activeCategory)) {
+		state.activeCategory = "todos";
+	}
 	applyStoreInfoToPage();
 	renderCategoriesUI();
 	renderProducts();
