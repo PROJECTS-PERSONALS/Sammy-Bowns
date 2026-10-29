@@ -252,24 +252,35 @@ por defecto si nunca se han editado).
    rama `gh-pages`/carpeta `docs` si tu flujo de trabajo lo requiere).
 2. Haz lo mismo para `dashboard/` (puede vivir en la misma publicación,
    GitHub Pages sirve cualquier carpeta del sitio).
-3. Antes de publicar, actualiza `frontend/js/config.js` **y**
-   `dashboard/js/config.js` con la URL real de tu backend ya desplegado
-   (ver sección siguiente) — mientras apunten a `localhost`, el sitio
-   publicado no podrá cargar productos.
+3. `frontend/js/config.js` y `dashboard/js/config.js` eligen solos el
+   backend: el local si la página se abre desde `localhost`, y el de Render
+   (`PRODUCTION_API_URL`) si se abre desde GitHub Pages.
 
-## 16. Deploy del backend
+## 16. Deploy del backend (Render gratis + MongoDB Atlas)
 
-`backend/` es un servidor Node.js normal — despliégalo en cualquier
-servicio compatible (Render, Railway, Fly.io, un VPS propio, etc.):
+El plan gratis de Render borra los archivos del servidor en cada reinicio,
+así que en producción los datos y las fotos subidas se guardan en MongoDB
+Atlas (plan gratis M0). En tu PC, sin `MONGODB_URI`, todo sigue en
+`backend/data/*.json` y `backend/uploads/`.
 
-1. Sube la carpeta `backend/` (o el repo completo) al servicio elegido.
-2. Configura las variables de entorno de `backend/.env.example` en el
-   panel del servicio (nunca subas el `.env` real).
-3. Define `CORS_ORIGIN` con el dominio real de tu GitHub Pages, por
-   ejemplo: `https://tu-usuario.github.io`.
-4. Una vez desplegado, copia la URL pública (ej.
-   `https://sammy-bowns-api.onrender.com/api`) en
-   `frontend/js/config.js` y `dashboard/js/config.js`.
+1. En MongoDB Atlas: crea un cluster gratis (M0), un usuario de base de
+   datos y, en **Network Access**, permite `0.0.0.0/0` (Render gratis no
+   tiene IP fija). Copia la cadena de conexión `mongodb+srv://...`.
+2. En Render: **New > Blueprint** y elige este repositorio (usa
+   `render.yaml`). Completa `MONGODB_URI`, `ADMIN_EMAIL` y
+   `ADMIN_PASSWORD_HASH` (el hash de tu `.env`). `JWT_SECRET` se genera
+   solo.
+3. La primera vez, como la base está vacía, el backend usa los datos de
+   `backend/data/`. Desde el primer guardado en el dashboard, los cambios
+   quedan en MongoDB, no en el repositorio.
+4. Si la URL final no es `https://sammy-bowns-api.onrender.com`, cámbiala
+   en `PRODUCTION_API_URL` de `frontend/js/config.js` y
+   `dashboard/js/config.js`. Abiertos desde `localhost`, ambos siguen
+   usando el backend local.
+
+Render gratis apaga el servicio tras 15 minutos sin visitas; la primera
+visita después tarda cerca de un minuto en responder. Mientras tanto la
+tienda muestra la última copia guardada en el navegador.
 
 ## 17. Configuración de CORS
 
